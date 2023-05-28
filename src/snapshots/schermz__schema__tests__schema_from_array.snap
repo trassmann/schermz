@@ -20,6 +20,6 @@ name:
     - STRING
 phones:
   types:
-    - - STRING
+    - "ARRAY(STRING,NUMBER)"
     - "NULL"
 
