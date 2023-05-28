@@ -7,6 +7,7 @@ enum ValueType {
     Bool,
     Number,
     String,
+    EmptyString,
     Object(SchemaObject),
     Array(Vec<ValueType>),
 }
@@ -28,7 +29,10 @@ impl ValueType {
             JsonValue::Null => Self::Null,
             JsonValue::Bool(_) => Self::Bool,
             JsonValue::Number(_) => Self::Number,
-            JsonValue::String(_) => Self::String,
+            JsonValue::String(_) => match json.as_str().unwrap() {
+                "" => Self::EmptyString,
+                _ => Self::String,
+            },
             JsonValue::Object(_) => Self::Object(SchemaObject::from_json(json)),
             JsonValue::Array(arr) => {
                 let values = arr.iter().map(Self::from_json).collect();
@@ -43,6 +47,7 @@ impl ValueType {
             ValueType::Bool => SchemaValueType::Primitive("BOOL".into()),
             ValueType::Number => SchemaValueType::Primitive("NUMBER".into()),
             ValueType::String => SchemaValueType::Primitive("STRING".into()),
+            ValueType::EmptyString => SchemaValueType::Primitive("EMPTY_STRING".into()),
             ValueType::Object(obj) => {
                 SchemaValueType::Object(Schema::from_objects("object".into(), vec![obj.clone()]))
             }
@@ -203,6 +208,7 @@ mod tests {
     fn test_schema_from_object() {
         let json = serde_json::json!({
             "name": "John Doe",
+            "title": "",
             "age": 43,
             "address": {
                 "street": "10 Downing Street",
@@ -223,6 +229,7 @@ mod tests {
         let json = serde_json::json!([
             {
                 "name": "John Doe",
+                "title": "",
                 "age": 43,
                 "address": {
                     "street": "10 Downing Street",
@@ -236,6 +243,7 @@ mod tests {
             },
             {
                 "name": "Jane Doe",
+                "title": "Dr.",
                 "age": "66",
                 "address": null,
                 "phones": null

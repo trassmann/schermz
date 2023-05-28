@@ -22,4 +22,8 @@ phones:
   types:
     - "ARRAY(STRING,NUMBER)"
     - "NULL"
+title:
+  types:
+    - EMPTY_STRING
+    - STRING
 

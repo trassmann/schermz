@@ -19,4 +19,7 @@ name:
 phones:
   types:
     - "ARRAY(STRING,NUMBER)"
+title:
+  types:
+    - EMPTY_STRING
 
