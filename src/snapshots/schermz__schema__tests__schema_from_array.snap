@@ -20,7 +20,7 @@ name:
     - STRING
 phones:
   types:
-    - "ARRAY(STRING,NUMBER)"
+    - "ARRAY(STRING, NUMBER)"
     - "NULL"
 title:
   types:

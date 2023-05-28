@@ -76,7 +76,7 @@ schermz -f ./sample.json
   },
   "phones": {
     "types": [
-      "ARRAY(STRING,NUMBER)",
+      "ARRAY(STRING, NUMBER)",
       "NULL"
     ]
   },
