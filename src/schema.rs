@@ -3,12 +3,12 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 enum ValueType {
-    NULL,
-    BOOL,
-    NUMBER,
-    STRING,
-    OBJECT(SchemaObject),
-    ARRAY(Vec<ValueType>),
+    Null,
+    Bool,
+    Number,
+    String,
+    Object(SchemaObject),
+    Array(Vec<ValueType>),
 }
 
 #[derive(Debug, Clone)]
@@ -25,28 +25,28 @@ pub struct SchemaObject {
 impl ValueType {
     pub fn from_json(json: &JsonValue) -> Self {
         match json {
-            JsonValue::Null => Self::NULL,
-            JsonValue::Bool(_) => Self::BOOL,
-            JsonValue::Number(_) => Self::NUMBER,
-            JsonValue::String(_) => Self::STRING,
-            JsonValue::Object(_) => Self::OBJECT(SchemaObject::from_json(json)),
+            JsonValue::Null => Self::Null,
+            JsonValue::Bool(_) => Self::Bool,
+            JsonValue::Number(_) => Self::Number,
+            JsonValue::String(_) => Self::String,
+            JsonValue::Object(_) => Self::Object(SchemaObject::from_json(json)),
             JsonValue::Array(arr) => {
-                let values = arr.iter().map(|value| Self::from_json(value)).collect();
-                Self::ARRAY(values)
+                let values = arr.iter().map(Self::from_json).collect();
+                Self::Array(values)
             }
         }
     }
 
     pub fn to_schema_value_type(&self) -> SchemaValueType {
         match self {
-            ValueType::NULL => SchemaValueType::PRIMITIVE("NULL".into()),
-            ValueType::BOOL => SchemaValueType::PRIMITIVE("BOOL".into()),
-            ValueType::NUMBER => SchemaValueType::PRIMITIVE("NUMBER".into()),
-            ValueType::STRING => SchemaValueType::PRIMITIVE("STRING".into()),
-            ValueType::OBJECT(obj) => {
-                SchemaValueType::OBJECT(Schema::from_objects("object".into(), vec![obj.clone()]))
+            ValueType::Null => SchemaValueType::Primitive("NULL".into()),
+            ValueType::Bool => SchemaValueType::Primitive("BOOL".into()),
+            ValueType::Number => SchemaValueType::Primitive("NUMBER".into()),
+            ValueType::String => SchemaValueType::Primitive("STRING".into()),
+            ValueType::Object(obj) => {
+                SchemaValueType::Object(Schema::from_objects("object".into(), vec![obj.clone()]))
             }
-            ValueType::ARRAY(arr) => {
+            ValueType::Array(arr) => {
                 let mut value_types = arr
                     .iter()
                     .map(|value_type| value_type.to_schema_value_type())
@@ -54,7 +54,7 @@ impl ValueType {
 
                 value_types.dedup();
 
-                SchemaValueType::ARRAY(value_types)
+                SchemaValueType::Array(value_types)
             }
         }
     }
@@ -76,23 +76,23 @@ impl SchemaObject {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SchemaValueType {
-    PRIMITIVE(String),
-    ARRAY(Vec<SchemaValueType>),
-    OBJECT(Schema),
+    Primitive(String),
+    Array(Vec<SchemaValueType>),
+    Object(Schema),
 }
 
 impl SchemaValueType {
     pub fn to_json(&self) -> JsonValue {
         match self {
-            SchemaValueType::PRIMITIVE(name) => JsonValue::String(name.clone()),
-            SchemaValueType::ARRAY(types) => {
+            SchemaValueType::Primitive(name) => JsonValue::String(name.clone()),
+            SchemaValueType::Array(types) => {
                 let mut arr = Vec::new();
                 for vtype in types {
                     arr.push(vtype.to_json());
                 }
                 JsonValue::Array(arr)
             }
-            SchemaValueType::OBJECT(schema) => schema.to_json(),
+            SchemaValueType::Object(schema) => schema.to_json(),
         }
     }
 }
@@ -113,7 +113,7 @@ impl Schema {
         for obj in objects {
             for key in &obj.keys {
                 match &key.v_type {
-                    ValueType::OBJECT(obj) => {
+                    ValueType::Object(obj) => {
                         // Collect all objects with the same key id into a vector
                         // so we can merge them together into a single schema
                         object_types
@@ -136,7 +136,7 @@ impl Schema {
             let name = key.clone();
             map.entry(key)
                 .or_insert_with(Vec::new)
-                .push(SchemaValueType::OBJECT(Schema::from_objects(name, value)));
+                .push(SchemaValueType::Object(Schema::from_objects(name, value)));
         }
 
         map
@@ -177,7 +177,7 @@ impl Schema {
                     .as_array()
                     .unwrap()
                     .iter()
-                    .map(|obj| SchemaObject::from_json(obj))
+                    .map(SchemaObject::from_json)
                     .collect::<Vec<SchemaObject>>();
 
                 Self::from_objects("root".into(), objects)
