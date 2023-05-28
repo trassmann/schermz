@@ -9,5 +9,5 @@ fn main() {
         serde_json::from_str(&data).expect("JSON does not have correct format.");
     let schema: schema::Schema = schema::Schema::from_json(&json);
 
-    dbg!(schema.map);
+    dbg!(schema);
 }

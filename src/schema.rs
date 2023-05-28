@@ -36,6 +36,28 @@ impl ValueType {
             }
         }
     }
+
+    pub fn to_schema_value_type(&self) -> SchemaValueType {
+        match self {
+            ValueType::NULL => SchemaValueType::PRIMITIVE("NULL".into()),
+            ValueType::BOOL => SchemaValueType::PRIMITIVE("BOOL".into()),
+            ValueType::NUMBER => SchemaValueType::PRIMITIVE("NUMBER".into()),
+            ValueType::STRING => SchemaValueType::PRIMITIVE("STRING".into()),
+            ValueType::OBJECT(obj) => {
+                SchemaValueType::OBJECT(Schema::from_objects("object".into(), vec![obj.clone()]))
+            }
+            ValueType::ARRAY(arr) => {
+                let mut value_types = arr
+                    .iter()
+                    .map(|value_type| value_type.to_schema_value_type())
+                    .collect::<Vec<SchemaValueType>>();
+
+                value_types.dedup();
+
+                SchemaValueType::ARRAY(value_types)
+            }
+        }
+    }
 }
 
 impl SchemaObject {
@@ -52,118 +74,72 @@ impl SchemaObject {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SchemaValueType {
     PRIMITIVE(String),
     ARRAY(Vec<SchemaValueType>),
     OBJECT(Schema),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Schema {
     pub name: String,
     pub map: HashMap<String, Vec<SchemaValueType>>,
 }
 
-#[derive(Debug, Clone)]
-struct KeyObjects(String, Vec<SchemaObject>);
+type CollectedObjects = HashMap<String, Vec<SchemaObject>>;
 
 impl Schema {
-    fn create_map(objects: Vec<SchemaObject>) -> HashMap<String, Vec<SchemaValueType>> {
+    fn create_map(
+        objects: Vec<SchemaObject>,
+        parent_key: Option<&String>,
+    ) -> HashMap<String, Vec<SchemaValueType>> {
         let mut map = HashMap::<String, Vec<SchemaValueType>>::new();
-        let mut key_objects = Vec::<KeyObjects>::new();
+        let mut object_types = CollectedObjects::new();
 
         for obj in objects {
             for key in &obj.keys {
                 match &key.v_type {
-                    ValueType::NULL => {
-                        map.entry(key.id.clone())
-                            .or_insert_with(Vec::new)
-                            .push(SchemaValueType::PRIMITIVE("NULL".into()));
-                    }
-                    ValueType::BOOL => {
-                        map.entry(key.id.clone())
-                            .or_insert_with(Vec::new)
-                            .push(SchemaValueType::PRIMITIVE("BOOL".into()));
-                    }
-                    ValueType::NUMBER => {
-                        map.entry(key.id.clone())
-                            .or_insert_with(Vec::new)
-                            .push(SchemaValueType::PRIMITIVE("NUMBER".into()));
-                    }
-                    ValueType::STRING => {
-                        map.entry(key.id.clone())
-                            .or_insert_with(Vec::new)
-                            .push(SchemaValueType::PRIMITIVE("STRING".into()));
-                    }
-                    ValueType::ARRAY(arr) => {
-                        // @TODO: Impl ValueType::to_schema_value_type
-                        map.entry(key.id.clone()).or_insert_with(Vec::new).push(
-                            SchemaValueType::ARRAY(
-                                arr.iter()
-                                    .map(|value_type| match value_type {
-                                        ValueType::NULL => {
-                                            SchemaValueType::PRIMITIVE("NULL".into())
-                                        }
-                                        ValueType::BOOL => {
-                                            SchemaValueType::PRIMITIVE("BOOL".into())
-                                        }
-                                        ValueType::NUMBER => {
-                                            SchemaValueType::PRIMITIVE("NUMBER".into())
-                                        }
-                                        ValueType::STRING => {
-                                            SchemaValueType::PRIMITIVE("STRING".into())
-                                        }
-                                        ValueType::OBJECT(obj) => {
-                                            SchemaValueType::OBJECT(Schema::from_objects(
-                                                "array-object".into(),
-                                                vec![obj.clone()],
-                                            ))
-                                        }
-                                        ValueType::ARRAY(_) => {
-                                            SchemaValueType::PRIMITIVE("ARRAY".into())
-                                        }
-                                    })
-                                    .collect(),
-                            ),
-                        );
-                    }
                     ValueType::OBJECT(obj) => {
-                        let existing_key_object = key_objects
-                            .iter_mut()
-                            .find(|key_object| key_object.0 == key.id);
-
-                        match existing_key_object {
-                            Some(key_object) => {
-                                key_object.1.push(obj.clone());
-                            }
-                            None => {
-                                key_objects.push(KeyObjects(key.id.clone(), vec![obj.clone()]));
-                            }
+                        // Collect all objects with the same key id into a vector
+                        // so we can merge them together into a single schema
+                        object_types
+                            .entry(key.id.clone())
+                            .or_insert_with(Vec::new)
+                            .push(obj.clone());
+                    }
+                    primitive_type => {
+                        let entry = map.entry(key.id.clone()).or_insert_with(Vec::new);
+                        let vtype = primitive_type.to_schema_value_type();
+                        if !entry.contains(&vtype) {
+                            entry.push(vtype);
                         }
                     }
                 }
             }
         }
 
-        for key_object in key_objects {
-            let name = format!("{}-{}", &key_object.0, "object");
-
-            map.entry(key_object.0)
+        for (key, value) in object_types {
+            let name = match parent_key {
+                Some(parent_key) => {
+                    format!("{}.{}", parent_key, key)
+                }
+                None => key.clone(),
+            };
+            map.entry(key)
                 .or_insert_with(Vec::new)
-                .push(SchemaValueType::OBJECT(Schema::from_objects(
-                    name,
-                    key_object.1,
-                )));
+                .push(SchemaValueType::OBJECT(Schema::from_objects(name, value)));
         }
 
         map
     }
 
     fn from_objects(name: String, objects: Vec<SchemaObject>) -> Self {
+        let name_cpy = name.clone();
+        let parent_key = Some(&name_cpy);
         Self {
             name,
-            map: Self::create_map(objects),
+            map: Self::create_map(objects, parent_key),
         }
     }
 
