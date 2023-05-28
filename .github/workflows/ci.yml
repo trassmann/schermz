@@ -1,38 +1,62 @@
-name: CI
-
-on: [push]
+on: [push, pull_request]
 
 jobs:
-  checks:
+  check:
+    name: Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
 
-      - name: Update local toolchain
-        run: |
-          rustup update
-          rustup component add clippy
-          rustup install nightly
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
 
-      - name: Toolchain info
-        run: |
-          cargo --version --verbose
-          rustc --version
-          cargo clippy --version
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
 
-      - name: Lint
-        run: |
-          cd phaser
-          cargo fmt -- --check
-          cargo clippy -- -D warnings
-
-      - name: Test
-        run: |
-          cd phaser
-          cargo check
-          cargo test --all
-
-      - name: Build
-        run: |
-          cd phaser
-          cargo build --release
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: rustup component add clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
