@@ -1,0 +1,25 @@
+---
+source: src/schema.rs
+expression: "Schema::from_json(&json).to_json()"
+---
+address:
+  types:
+    - "NULL"
+    - city:
+        types:
+          - STRING
+      street:
+        types:
+          - STRING
+age:
+  types:
+    - NUMBER
+    - STRING
+name:
+  types:
+    - STRING
+phones:
+  types:
+    - - STRING
+    - "NULL"
+

@@ -1,0 +1,22 @@
+---
+source: src/schema.rs
+expression: schema.to_json()
+---
+address:
+  types:
+    - city:
+        types:
+          - STRING
+      street:
+        types:
+          - STRING
+age:
+  types:
+    - NUMBER
+name:
+  types:
+    - STRING
+phones:
+  types:
+    - - STRING
+

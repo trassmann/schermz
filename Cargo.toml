@@ -10,3 +10,8 @@ edition = "2018"
 [dependencies]
 serde_json = "1.0"
 indextree = "4.6.0"
+clap = { version = "4.3.0", features = ["derive"] }
+
+[dev-dependencies]
+insta = { version = "1.29.0", features = ["yaml"] }
+ 

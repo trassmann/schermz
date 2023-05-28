@@ -81,6 +81,22 @@ pub enum SchemaValueType {
     OBJECT(Schema),
 }
 
+impl SchemaValueType {
+    pub fn to_json(&self) -> JsonValue {
+        match self {
+            SchemaValueType::PRIMITIVE(name) => JsonValue::String(name.clone()),
+            SchemaValueType::ARRAY(types) => {
+                let mut arr = Vec::new();
+                for vtype in types {
+                    arr.push(vtype.to_json());
+                }
+                JsonValue::Array(arr)
+            }
+            SchemaValueType::OBJECT(schema) => schema.to_json(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Schema {
     pub name: String,
@@ -133,6 +149,24 @@ impl Schema {
         }
     }
 
+    pub fn to_json(&self) -> JsonValue {
+        let mut map = serde_json::Map::new();
+
+        for (key, value) in &self.map {
+            let mut entry = serde_json::Map::new();
+            let mut types = Vec::new();
+
+            for vtype in value {
+                types.push(vtype.to_json());
+            }
+
+            entry.insert("types".into(), serde_json::Value::Array(types));
+            map.insert(key.clone(), serde_json::Value::Object(entry));
+        }
+
+        serde_json::Value::Object(map)
+    }
+
     pub fn from_json(json: &JsonValue) -> Self {
         match json {
             JsonValue::Object(_) => {
@@ -156,7 +190,6 @@ impl Schema {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // use std::fs;
 
     #[test]
     #[should_panic]
@@ -179,42 +212,7 @@ mod tests {
             ]
         });
 
-        let schema = Schema::from_json(&json);
-
-        assert_eq!(schema.name, "root");
-        assert_eq!(schema.map.len(), 4);
-        assert_eq!(
-            schema.map.get("name").unwrap(),
-            &vec![SchemaValueType::PRIMITIVE("STRING".into())]
-        );
-        assert_eq!(
-            schema.map.get("age").unwrap(),
-            &vec![SchemaValueType::PRIMITIVE("NUMBER".into())]
-        );
-        assert_eq!(
-            schema.map.get("address").unwrap(),
-            &vec![SchemaValueType::OBJECT(Schema {
-                name: "address".into(),
-                map: vec![
-                    (
-                        "street".into(),
-                        vec![SchemaValueType::PRIMITIVE("STRING".into())]
-                    ),
-                    (
-                        "city".into(),
-                        vec![SchemaValueType::PRIMITIVE("STRING".into())]
-                    )
-                ]
-                .into_iter()
-                .collect()
-            })]
-        );
-        assert_eq!(
-            schema.map.get("phones").unwrap(),
-            &vec![SchemaValueType::ARRAY(vec![SchemaValueType::PRIMITIVE(
-                "STRING".into()
-            )])]
-        );
+        insta::assert_yaml_snapshot!(Schema::from_json(&json).to_json());
     }
 
     #[test]
@@ -240,48 +238,6 @@ mod tests {
             }
         ]);
 
-        let schema = Schema::from_json(&json);
-
-        assert_eq!(schema.name, "root");
-        assert_eq!(schema.map.len(), 4);
-        assert_eq!(
-            schema.map.get("name").unwrap(),
-            &vec![SchemaValueType::PRIMITIVE("STRING".into())]
-        );
-        assert_eq!(
-            schema.map.get("age").unwrap(),
-            &vec![
-                SchemaValueType::PRIMITIVE("NUMBER".into()),
-                SchemaValueType::PRIMITIVE("STRING".into())
-            ]
-        );
-        assert_eq!(
-            schema.map.get("address").unwrap(),
-            &vec![
-                SchemaValueType::PRIMITIVE("NULL".into()),
-                SchemaValueType::OBJECT(Schema {
-                    name: "address".into(),
-                    map: vec![
-                        (
-                            "street".into(),
-                            vec![SchemaValueType::PRIMITIVE("STRING".into())]
-                        ),
-                        (
-                            "city".into(),
-                            vec![SchemaValueType::PRIMITIVE("STRING".into())]
-                        )
-                    ]
-                    .into_iter()
-                    .collect()
-                }),
-            ]
-        );
-        assert_eq!(
-            schema.map.get("phones").unwrap(),
-            &vec![
-                SchemaValueType::ARRAY(vec![SchemaValueType::PRIMITIVE("STRING".into())]),
-                SchemaValueType::PRIMITIVE("NULL".into()),
-            ]
-        );
+        insta::assert_yaml_snapshot!(Schema::from_json(&json).to_json());
     }
 }
