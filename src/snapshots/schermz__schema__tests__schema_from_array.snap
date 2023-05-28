@@ -20,7 +20,12 @@ name:
     - STRING
 phones:
   types:
-    - "ARRAY(STRING, NUMBER)"
+    - ARRAY:
+        - STRING
+        - NUMBER
+        - mobile:
+            types:
+              - STRING
     - "NULL"
 title:
   types:
