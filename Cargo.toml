@@ -2,10 +2,14 @@
 name = "schermz"
 version = "0.1.0"
 authors = ["trassmann"]
-license = "ISC"
+license = "MIT"
+description = "A tool to generate a schema for a given JSON file."
+readme = "README.md" 
+homepage = "https://github.com/trassmann/schermz"
+repository = "https://github.com/trassmann/schermz"
+keywords = ["cli", "json", "schema"] 
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+categories = ["command-line-utilities"]
 
 [dependencies]
 serde_json = "1.0"
