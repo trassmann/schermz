@@ -24,6 +24,7 @@ schermz -f <path to json file>
 [
   {
     "name": "John Doe",
+    "title": "",
     "age": 43,
     "address": {
       "street": "10 Downing Street",
@@ -33,6 +34,7 @@ schermz -f <path to json file>
   },
   {
     "name": "Jane Doe",
+    "title": "Dr.",
     "age": "66",
     "address": null,
     "phones": null
@@ -76,6 +78,12 @@ schermz -f ./sample.json
     "types": [
       "ARRAY(STRING,NUMBER)",
       "NULL"
+    ]
+  },
+  "title": {
+    "types": [
+      "EMPTY_STRING",
+      "STRING"
     ]
   }
 }
