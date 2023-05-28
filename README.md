@@ -2,6 +2,12 @@
 
 A CLI tool to create a schema from a JSON file.
 
+## Installation
+
+```bash
+cargo install schermz
+```
+
 ## Usage
 
 ```bash
