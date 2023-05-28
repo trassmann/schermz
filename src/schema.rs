@@ -93,11 +93,10 @@ impl SchemaValueType {
             SchemaValueType::Array(v_types) => {
                 let types = v_types
                     .iter()
-                    .map(|v| v.to_json().as_str().unwrap().to_string())
-                    .collect::<Vec<String>>()
-                    .join(", ");
+                    .map(|v| v.to_json())
+                    .collect::<Vec<JsonValue>>();
 
-                JsonValue::String(format!("ARRAY({})", types))
+                serde_json::json!({ "ARRAY": types })
             }
             SchemaValueType::Object(schema) => schema.to_json(),
         }
@@ -217,7 +216,8 @@ mod tests {
             "phones": [
                 "+44 1234567",
                 "+44 2345678",
-                123456
+                123456,
+                { "mobile": "+44 3456789" }
             ]
         });
 
@@ -238,7 +238,8 @@ mod tests {
                 "phones": [
                     "+44 1234567",
                     "+44 2345678",
-                    123456
+                    123456,
+                    { "mobile": "+44 3456789" }
                 ]
             },
             {
