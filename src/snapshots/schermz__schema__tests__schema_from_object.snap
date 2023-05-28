@@ -1,6 +1,6 @@
 ---
 source: src/schema.rs
-expression: schema.to_json()
+expression: "Schema::from_json(&json).to_json()"
 ---
 address:
   types:
@@ -18,5 +18,5 @@ name:
     - STRING
 phones:
   types:
-    - - STRING
+    - "ARRAY(STRING,NUMBER)"
 

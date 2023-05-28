@@ -27,7 +27,7 @@ schermz -f <path to json file>
       "street": "10 Downing Street",
       "city": "London"
     },
-    "phones": ["+44 1234567", "+44 2345678"]
+    "phones": ["+44 1234567", "+44 2345678", 123456]
   },
   {
     "name": "Jane Doe",
@@ -72,9 +72,7 @@ schermz -f ./sample.json
   },
   "phones": {
     "types": [
-      [
-        "STRING"
-      ],
+      "ARRAY(STRING,NUMBER)",
       "NULL"
     ]
   }

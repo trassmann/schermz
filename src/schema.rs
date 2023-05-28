@@ -85,12 +85,14 @@ impl SchemaValueType {
     pub fn to_json(&self) -> JsonValue {
         match self {
             SchemaValueType::Primitive(name) => JsonValue::String(name.clone()),
-            SchemaValueType::Array(types) => {
-                let mut arr = Vec::new();
-                for vtype in types {
-                    arr.push(vtype.to_json());
-                }
-                JsonValue::Array(arr)
+            SchemaValueType::Array(v_types) => {
+                let types = v_types
+                    .iter()
+                    .map(|v| v.to_json().as_str().unwrap().to_string())
+                    .collect::<Vec<String>>()
+                    .join(",");
+
+                JsonValue::String(format!("ARRAY({})", types))
             }
             SchemaValueType::Object(schema) => schema.to_json(),
         }
@@ -208,7 +210,8 @@ mod tests {
             },
             "phones": [
                 "+44 1234567",
-                "+44 2345678"
+                "+44 2345678",
+                123456
             ]
         });
 
@@ -227,7 +230,8 @@ mod tests {
                 },
                 "phones": [
                     "+44 1234567",
-                    "+44 2345678"
+                    "+44 2345678",
+                    123456
                 ]
             },
             {
