@@ -1,6 +1,6 @@
 [package]
 name = "schermz"
-version = "0.1.7"
+version = "0.1.8"
 authors = ["trassmann"]
 license = "MIT"
 description = "A tool to generate a schema for a given JSON file."
@@ -13,7 +13,6 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 serde_json = "1.0"
-indextree = "4.6.0"
 clap = { version = "4.3.0", features = ["derive"] }
 
 [dev-dependencies]
