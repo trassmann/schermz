@@ -90,10 +90,7 @@ pub struct Schema {
 type CollectedObjects = HashMap<String, Vec<SchemaObject>>;
 
 impl Schema {
-    fn create_map(
-        objects: Vec<SchemaObject>,
-        parent_key: Option<&String>,
-    ) -> HashMap<String, Vec<SchemaValueType>> {
+    fn create_map(objects: Vec<SchemaObject>) -> HashMap<String, Vec<SchemaValueType>> {
         let mut map = HashMap::<String, Vec<SchemaValueType>>::new();
         let mut object_types = CollectedObjects::new();
 
@@ -120,12 +117,7 @@ impl Schema {
         }
 
         for (key, value) in object_types {
-            let name = match parent_key {
-                Some(parent_key) => {
-                    format!("{}.{}", parent_key, key)
-                }
-                None => key.clone(),
-            };
+            let name = key.clone();
             map.entry(key)
                 .or_insert_with(Vec::new)
                 .push(SchemaValueType::OBJECT(Schema::from_objects(name, value)));
@@ -135,22 +127,161 @@ impl Schema {
     }
 
     fn from_objects(name: String, objects: Vec<SchemaObject>) -> Self {
-        let name_cpy = name.clone();
-        let parent_key = Some(&name_cpy);
         Self {
             name,
-            map: Self::create_map(objects, parent_key),
+            map: Self::create_map(objects),
         }
     }
 
     pub fn from_json(json: &JsonValue) -> Self {
-        let objects = json
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|obj| SchemaObject::from_json(obj))
-            .collect::<Vec<SchemaObject>>();
+        match json {
+            JsonValue::Object(_) => {
+                Self::from_objects("root".into(), vec![SchemaObject::from_json(json)])
+            }
+            JsonValue::Array(_) => {
+                let objects = json
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|obj| SchemaObject::from_json(obj))
+                    .collect::<Vec<SchemaObject>>();
 
-        Self::from_objects("root".into(), objects)
+                Self::from_objects("root".into(), objects)
+            }
+            _ => panic!("Invalid input JSON"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // use std::fs;
+
+    #[test]
+    #[should_panic]
+    fn invalid_input() {
+        Schema::from_json(&serde_json::Value::Null);
+    }
+
+    #[test]
+    fn test_schema_from_object() {
+        let json = serde_json::json!({
+            "name": "John Doe",
+            "age": 43,
+            "address": {
+                "street": "10 Downing Street",
+                "city": "London"
+            },
+            "phones": [
+                "+44 1234567",
+                "+44 2345678"
+            ]
+        });
+
+        let schema = Schema::from_json(&json);
+
+        assert_eq!(schema.name, "root");
+        assert_eq!(schema.map.len(), 4);
+        assert_eq!(
+            schema.map.get("name").unwrap(),
+            &vec![SchemaValueType::PRIMITIVE("STRING".into())]
+        );
+        assert_eq!(
+            schema.map.get("age").unwrap(),
+            &vec![SchemaValueType::PRIMITIVE("NUMBER".into())]
+        );
+        assert_eq!(
+            schema.map.get("address").unwrap(),
+            &vec![SchemaValueType::OBJECT(Schema {
+                name: "address".into(),
+                map: vec![
+                    (
+                        "street".into(),
+                        vec![SchemaValueType::PRIMITIVE("STRING".into())]
+                    ),
+                    (
+                        "city".into(),
+                        vec![SchemaValueType::PRIMITIVE("STRING".into())]
+                    )
+                ]
+                .into_iter()
+                .collect()
+            })]
+        );
+        assert_eq!(
+            schema.map.get("phones").unwrap(),
+            &vec![SchemaValueType::ARRAY(vec![SchemaValueType::PRIMITIVE(
+                "STRING".into()
+            )])]
+        );
+    }
+
+    #[test]
+    fn test_schema_from_array() {
+        let json = serde_json::json!([
+            {
+                "name": "John Doe",
+                "age": 43,
+                "address": {
+                    "street": "10 Downing Street",
+                    "city": "London"
+                },
+                "phones": [
+                    "+44 1234567",
+                    "+44 2345678"
+                ]
+            },
+            {
+                "name": "Jane Doe",
+                "age": "66",
+                "address": null,
+                "phones": null
+            }
+        ]);
+
+        let schema = Schema::from_json(&json);
+
+        assert_eq!(schema.name, "root");
+        assert_eq!(schema.map.len(), 4);
+        assert_eq!(
+            schema.map.get("name").unwrap(),
+            &vec![SchemaValueType::PRIMITIVE("STRING".into())]
+        );
+        assert_eq!(
+            schema.map.get("age").unwrap(),
+            &vec![
+                SchemaValueType::PRIMITIVE("NUMBER".into()),
+                SchemaValueType::PRIMITIVE("STRING".into())
+            ]
+        );
+        assert_eq!(
+            schema.map.get("address").unwrap(),
+            &vec![
+                SchemaValueType::PRIMITIVE("NULL".into()),
+                SchemaValueType::OBJECT(Schema {
+                    name: "address".into(),
+                    map: vec![
+                        (
+                            "street".into(),
+                            vec![SchemaValueType::PRIMITIVE("STRING".into())]
+                        ),
+                        (
+                            "city".into(),
+                            vec![SchemaValueType::PRIMITIVE("STRING".into())]
+                        )
+                    ]
+                    .into_iter()
+                    .collect()
+                }),
+            ]
+        );
+        assert_eq!(
+            schema.map.get("phones").unwrap(),
+            &vec![
+                SchemaValueType::ARRAY(vec![SchemaValueType::PRIMITIVE("STRING".into())]),
+                SchemaValueType::PRIMITIVE("NULL".into()),
+            ]
+        );
     }
 }
