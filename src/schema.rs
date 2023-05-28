@@ -95,7 +95,7 @@ impl SchemaValueType {
                     .iter()
                     .map(|v| v.to_json().as_str().unwrap().to_string())
                     .collect::<Vec<String>>()
-                    .join(",");
+                    .join(", ");
 
                 JsonValue::String(format!("ARRAY({})", types))
             }
