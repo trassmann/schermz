@@ -183,12 +183,15 @@ impl Schema {
                     .as_array()
                     .unwrap()
                     .iter()
-                    .map(SchemaObject::from_json)
+                    .filter_map(|el| match el {
+                        JsonValue::Object(_) => Some(SchemaObject::from_json(el)),
+                        _ => None,
+                    })
                     .collect::<Vec<SchemaObject>>();
 
                 Self::from_objects("root".into(), objects)
             }
-            _ => panic!("Invalid input JSON"),
+            _ => panic!("Invalid JSON"),
         }
     }
 }
