@@ -19,11 +19,11 @@ name:
 phones:
   types:
     - ARRAY:
-        - STRING
-        - NUMBER
         - mobile:
             types:
               - STRING
+        - STRING
+        - NUMBER
 title:
   types:
     - EMPTY_STRING

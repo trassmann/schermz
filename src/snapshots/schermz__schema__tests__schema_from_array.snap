@@ -20,13 +20,13 @@ name:
     - STRING
 phones:
   types:
+    - "NULL"
     - ARRAY:
-        - STRING
-        - NUMBER
         - mobile:
             types:
               - STRING
-    - "NULL"
+        - STRING
+        - NUMBER
 title:
   types:
     - EMPTY_STRING
