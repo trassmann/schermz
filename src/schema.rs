@@ -172,11 +172,8 @@ impl Schema {
             let name = key.clone();
             let schema = Schema::from_objects(name.clone(), value);
             let mut all_array_types = vec![SchemaValueType::Object(schema)];
-            match array_primitive_types_map.get_mut(&name) {
-                Some(primitive_types) => {
-                    all_array_types.append(primitive_types);
-                }
-                None => {}
+            if let Some(primitive_types) = array_primitive_types_map.get_mut(&name) {
+                all_array_types.append(primitive_types);
             }
             map.entry(key)
                 .or_insert_with(Vec::new)
