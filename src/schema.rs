@@ -115,6 +115,8 @@ impl Schema {
     fn create_map(objects: Vec<SchemaObject>) -> HashMap<String, Vec<SchemaValueType>> {
         let mut map = HashMap::<String, Vec<SchemaValueType>>::new();
         let mut object_types = CollectedObjects::new();
+        let mut array_object_types = CollectedObjects::new();
+        let mut array_primitive_types_map = HashMap::<String, Vec<SchemaValueType>>::new();
 
         for obj in objects {
             for key in &obj.keys {
@@ -126,6 +128,27 @@ impl Schema {
                             .entry(key.id.clone())
                             .or_insert_with(Vec::new)
                             .push(obj.clone());
+                    }
+                    ValueType::Array(arr) => {
+                        for value_type in arr {
+                            match value_type {
+                                ValueType::Object(obj) => {
+                                    array_object_types
+                                        .entry(key.id.clone())
+                                        .or_insert_with(Vec::new)
+                                        .push(obj.clone());
+                                }
+                                primitive_type => {
+                                    let entry = array_primitive_types_map
+                                        .entry(key.id.clone())
+                                        .or_insert_with(Vec::new);
+                                    let vtype = primitive_type.to_schema_value_type();
+                                    if !entry.contains(&vtype) {
+                                        entry.push(vtype);
+                                    }
+                                }
+                            }
+                        }
                     }
                     primitive_type => {
                         let entry = map.entry(key.id.clone()).or_insert_with(Vec::new);
@@ -143,6 +166,21 @@ impl Schema {
             map.entry(key)
                 .or_insert_with(Vec::new)
                 .push(SchemaValueType::Object(Schema::from_objects(name, value)));
+        }
+
+        for (key, value) in array_object_types {
+            let name = key.clone();
+            let schema = Schema::from_objects(name.clone(), value);
+            let mut all_array_types = vec![SchemaValueType::Object(schema)];
+            match array_primitive_types_map.get_mut(&name) {
+                Some(primitive_types) => {
+                    all_array_types.append(primitive_types);
+                }
+                None => {}
+            }
+            map.entry(key)
+                .or_insert_with(Vec::new)
+                .push(SchemaValueType::Array(all_array_types));
         }
 
         map
