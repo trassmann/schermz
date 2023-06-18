@@ -2,33 +2,57 @@
 source: src/schema.rs
 expression: "Schema::from_json(&json).to_json()"
 ---
-address:
-  types:
-    - "NULL"
-    - city:
-        types:
-          - STRING
-      street:
-        types:
-          - STRING
-age:
-  types:
-    - NUMBER
-    - STRING
-name:
-  types:
-    - STRING
-phones:
-  types:
-    - "NULL"
-    - ARRAY:
-        - mobile:
-            types:
-              - STRING
-        - STRING
-        - NUMBER
-title:
-  types:
-    - EMPTY_STRING
-    - STRING
-
+{
+  "address": {
+    "types": [
+      "NULL",
+      {
+        "city": {
+          "types": [
+            "STRING"
+          ]
+        },
+        "street": {
+          "types": [
+            "STRING"
+          ]
+        }
+      }
+    ]
+  },
+  "age": {
+    "types": [
+      "NUMBER",
+      "STRING"
+    ]
+  },
+  "name": {
+    "types": [
+      "STRING"
+    ]
+  },
+  "phones": {
+    "types": [
+      "NULL",
+      {
+        "ARRAY": [
+          {
+            "mobile": {
+              "types": [
+                "STRING"
+              ]
+            }
+          },
+          "STRING",
+          "NUMBER"
+        ]
+      }
+    ]
+  },
+  "title": {
+    "types": [
+      "EMPTY_STRING",
+      "STRING"
+    ]
+  }
+}

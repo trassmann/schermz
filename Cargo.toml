@@ -1,13 +1,13 @@
 [package]
 name = "schermz"
-version = "0.1.10"
+version = "0.1.11"
 authors = ["trassmann"]
 license = "MIT"
 description = "A tool to generate a schema for a given JSON file."
 readme = "README.md" 
 homepage = "https://github.com/trassmann/schermz"
 repository = "https://github.com/trassmann/schermz"
-keywords = ["cli", "json", "schema"] 
+keywords = ["cli", "json", "schema", "model", "generator"] 
 edition = "2018"
 categories = ["command-line-utilities"]
 
@@ -16,5 +16,5 @@ serde_json = "1.0"
 clap = { version = "4.3.3", features = ["derive"] }
 
 [dev-dependencies]
-insta = { version = "1.29.0", features = ["yaml"] }
+insta = { version = "1.29.0", features = ["json"] }
  

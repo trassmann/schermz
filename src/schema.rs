@@ -259,7 +259,7 @@ mod tests {
             ]
         });
 
-        insta::assert_yaml_snapshot!(Schema::from_json(&json).to_json());
+        insta::assert_json_snapshot!(Schema::from_json(&json).to_json());
     }
 
     #[test]
@@ -289,6 +289,6 @@ mod tests {
             }
         ]);
 
-        insta::assert_yaml_snapshot!(Schema::from_json(&json).to_json());
+        insta::assert_json_snapshot!(Schema::from_json(&json).to_json());
     }
 }
