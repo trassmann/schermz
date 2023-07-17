@@ -1,6 +1,6 @@
 [package]
 name = "schermz"
-version = "0.1.12"
+version = "0.1.13"
 authors = ["trassmann"]
 license = "MIT"
 description = "A tool to generate a schema for a given JSON file."
