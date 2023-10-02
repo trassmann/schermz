@@ -44,7 +44,6 @@ impl ValueType {
             ValueType::Null => SchemaValueType::Primitive("NULL".into()),
             ValueType::Bool => SchemaValueType::Primitive("BOOL".into()),
             ValueType::Number => SchemaValueType::Primitive("NUMBER".into()),
-            ValueType::String(_) => SchemaValueType::Primitive("STRING".into()),
             ValueType::Object(obj) => {
                 SchemaValueType::Object(Schema::from_objects("object".into(), vec![obj.clone()]))
             }
@@ -58,6 +57,7 @@ impl ValueType {
 
                 SchemaValueType::Array(value_types)
             }
+            _ => panic!("Invalid value type"),
         }
     }
 }
@@ -123,6 +123,7 @@ impl Schema {
         let mut object_types = CollectedObjects::new();
         let mut array_object_types = CollectedObjects::new();
         let mut array_primitive_types_map = HashMap::<String, Vec<SchemaValueType>>::new();
+        let mut array_string_lens_map = HashMap::<String, Vec<usize>>::new();
 
         for obj in objects {
             for key in &obj.keys {
@@ -143,6 +144,12 @@ impl Schema {
                                         .entry(key.id.clone())
                                         .or_insert_with(Vec::new)
                                         .push(obj.clone());
+                                }
+                                ValueType::String(len) => {
+                                    array_string_lens_map
+                                        .entry(key.id.clone())
+                                        .or_insert_with(Vec::new)
+                                        .push(*len);
                                 }
                                 primitive_type => {
                                     let entry = array_primitive_types_map
@@ -194,6 +201,11 @@ impl Schema {
             let mut all_array_types = vec![SchemaValueType::Object(schema)];
             if let Some(primitive_types) = array_primitive_types_map.get_mut(&name) {
                 all_array_types.append(primitive_types);
+            }
+            if let Some(string_lens) = array_string_lens_map.get_mut(&name) {
+                let min = string_lens.iter().min().unwrap();
+                let max = string_lens.iter().max().unwrap();
+                all_array_types.push(SchemaValueType::String(*min, *max));
             }
             map.entry(key)
                 .or_insert_with(Vec::new)
@@ -313,6 +325,8 @@ mod tests {
                 "phones": [
                     "+49 1234567",
                     "+49 2345678",
+                    "+49 11111111111",
+                    "+49 301234566",
                     123456,
                     { "mobile": "+49 3456789" }
                 ]

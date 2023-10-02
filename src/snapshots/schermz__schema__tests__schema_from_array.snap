@@ -48,8 +48,8 @@ expression: "Schema::from_json(&json).to_json()"
               ]
             }
           },
-          "STRING",
-          "NUMBER"
+          "NUMBER",
+          "STRING(11, 15)"
         ]
       }
     ]
