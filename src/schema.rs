@@ -6,8 +6,7 @@ enum ValueType {
     Null,
     Bool,
     Number,
-    String,
-    EmptyString,
+    String(usize),
     Object(SchemaObject),
     Array(Vec<ValueType>),
 }
@@ -30,8 +29,7 @@ impl ValueType {
             JsonValue::Bool(_) => Self::Bool,
             JsonValue::Number(_) => Self::Number,
             JsonValue::String(_) => match json.as_str().unwrap() {
-                "" => Self::EmptyString,
-                _ => Self::String,
+                str => Self::String(str.len()),
             },
             JsonValue::Object(_) => Self::Object(SchemaObject::from_json(json)),
             JsonValue::Array(arr) => {
@@ -46,8 +44,7 @@ impl ValueType {
             ValueType::Null => SchemaValueType::Primitive("NULL".into()),
             ValueType::Bool => SchemaValueType::Primitive("BOOL".into()),
             ValueType::Number => SchemaValueType::Primitive("NUMBER".into()),
-            ValueType::String => SchemaValueType::Primitive("STRING".into()),
-            ValueType::EmptyString => SchemaValueType::Primitive("EMPTY_STRING".into()),
+            ValueType::String(_) => SchemaValueType::Primitive("STRING".into()),
             ValueType::Object(obj) => {
                 SchemaValueType::Object(Schema::from_objects("object".into(), vec![obj.clone()]))
             }
@@ -82,6 +79,7 @@ impl SchemaObject {
 #[derive(Debug, Clone, PartialEq)]
 pub enum SchemaValueType {
     Primitive(String),
+    String(usize, usize),
     Array(Vec<SchemaValueType>),
     Object(Schema),
 }
@@ -90,6 +88,13 @@ impl SchemaValueType {
     pub fn to_json(&self) -> JsonValue {
         match self {
             SchemaValueType::Primitive(name) => JsonValue::String(name.clone()),
+            SchemaValueType::String(min, max) => {
+                if min == max {
+                    return JsonValue::String(format!("STRING({})", min));
+                }
+
+                JsonValue::String(format!("STRING({}, {})", min, max))
+            }
             SchemaValueType::Array(v_types) => {
                 let types = v_types
                     .iter()
@@ -114,6 +119,7 @@ type CollectedObjects = HashMap<String, Vec<SchemaObject>>;
 impl Schema {
     fn create_map(objects: Vec<SchemaObject>) -> HashMap<String, Vec<SchemaValueType>> {
         let mut map = HashMap::<String, Vec<SchemaValueType>>::new();
+        let mut string_lens = HashMap::<String, Vec<usize>>::new();
         let mut object_types = CollectedObjects::new();
         let mut array_object_types = CollectedObjects::new();
         let mut array_primitive_types_map = HashMap::<String, Vec<SchemaValueType>>::new();
@@ -150,6 +156,12 @@ impl Schema {
                             }
                         }
                     }
+                    ValueType::String(len) => {
+                        string_lens
+                            .entry(key.id.clone())
+                            .or_insert_with(Vec::new)
+                            .push(*len);
+                    }
                     primitive_type => {
                         let entry = map.entry(key.id.clone()).or_insert_with(Vec::new);
                         let vtype = primitive_type.to_schema_value_type();
@@ -159,6 +171,14 @@ impl Schema {
                     }
                 }
             }
+        }
+
+        for (key, value) in string_lens {
+            let min = value.iter().min().unwrap();
+            let max = value.iter().max().unwrap();
+            map.entry(key)
+                .or_insert_with(Vec::new)
+                .push(SchemaValueType::String(*min, *max));
         }
 
         for (key, value) in object_types {
@@ -271,13 +291,30 @@ mod tests {
                 "age": 43,
                 "address": {
                     "street": "10 Downing Street",
-                    "city": "London"
+                    "city": "London",
+                    "zip": "12345"
                 },
                 "phones": [
                     "+44 1234567",
                     "+44 2345678",
                     123456,
                     { "mobile": "+44 3456789" }
+                ]
+            },
+            {
+                "name": "Jerry-Pascal Doe",
+                "title": "",
+                "age": 56,
+                "address": {
+                    "street": "Gr. Weg 3",
+                    "city": "Potsdam",
+                    "zip": ""
+                },
+                "phones": [
+                    "+49 1234567",
+                    "+49 2345678",
+                    123456,
+                    { "mobile": "+49 3456789" }
                 ]
             },
             {
