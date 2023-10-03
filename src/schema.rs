@@ -28,9 +28,10 @@ impl ValueType {
             JsonValue::Null => Self::Null,
             JsonValue::Bool(_) => Self::Bool,
             JsonValue::Number(_) => Self::Number,
-            JsonValue::String(_) => match json.as_str().unwrap() {
-                str => Self::String(str.len()),
-            },
+            JsonValue::String(_) => {
+                let str = json.as_str().unwrap();
+                Self::String(str.len())
+            }
             JsonValue::Object(_) => Self::Object(SchemaObject::from_json(json)),
             JsonValue::Array(arr) => {
                 let values = arr.iter().map(Self::from_json).collect();
