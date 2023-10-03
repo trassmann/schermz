@@ -28,9 +28,33 @@ schermz -f <path to json file>
     "age": 43,
     "address": {
       "street": "10 Downing Street",
-      "city": "London"
+      "city": "London",
+      "zip": "12345"
     },
-    "phones": ["+44 1234567", "+44 2345678", { "mobile": "+44 3456789" }]
+    "phones": [
+      "+44 1234567",
+      "+44 2345678",
+      123456,
+      { "mobile": "+44 3456789" }
+    ]
+  },
+  {
+    "name": "Jerry-Pascal Doe",
+    "title": "",
+    "age": 56,
+    "address": {
+      "street": "Gr. Weg 3",
+      "city": "Potsdam",
+      "zip": ""
+    },
+    "phones": [
+      "+49 1234567",
+      "+49 2345678",
+      "+49 11111111111",
+      "+49 301234566",
+      123456,
+      { "mobile": "+49 3456789" }
+    ]
   },
   {
     "name": "Jane Doe",
@@ -52,12 +76,17 @@ schermz -f ./sample.json
       {
         "city": {
           "types": [
-            "STRING"
+            "STRING(6, 7)"
           ]
         },
         "street": {
           "types": [
-            "STRING"
+            "STRING(9, 17)"
+          ]
+        },
+        "zip": {
+          "types": [
+            "STRING(0, 5)"
           ]
         }
       }
@@ -66,35 +95,35 @@ schermz -f ./sample.json
   "age": {
     "types": [
       "NUMBER",
-      "STRING"
+      "STRING(2)"
     ]
   },
   "name": {
     "types": [
-      "STRING"
+      "STRING(8, 16)"
     ]
   },
   "phones": {
     "types": [
+      "NULL",
       {
         "ARRAY": [
-          "STRING",
           {
             "mobile": {
               "types": [
-                "STRING"
+                "STRING(11)"
               ]
             }
-          }
+          },
+          "NUMBER",
+          "STRING(11, 15)"
         ]
-      },
-      "NULL"
+      }
     ]
   },
   "title": {
     "types": [
-      "EMPTY_STRING",
-      "STRING"
+      "STRING(0, 3)"
     ]
   }
 }
