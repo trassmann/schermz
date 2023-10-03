@@ -8,12 +8,12 @@ expression: "Schema::from_json(&json).to_json()"
       {
         "city": {
           "types": [
-            "STRING"
+            "STRING(6)"
           ]
         },
         "street": {
           "types": [
-            "STRING"
+            "STRING(17)"
           ]
         }
       }
@@ -26,7 +26,7 @@ expression: "Schema::from_json(&json).to_json()"
   },
   "name": {
     "types": [
-      "STRING"
+      "STRING(8)"
     ]
   },
   "phones": {
@@ -36,19 +36,19 @@ expression: "Schema::from_json(&json).to_json()"
           {
             "mobile": {
               "types": [
-                "STRING"
+                "STRING(11)"
               ]
             }
           },
-          "STRING",
-          "NUMBER"
+          "NUMBER",
+          "STRING(11)"
         ]
       }
     ]
   },
   "title": {
     "types": [
-      "EMPTY_STRING"
+      "STRING(0)"
     ]
   }
 }
