@@ -23,52 +23,87 @@ schermz -f <path to json file>
 ```json
 [
   {
-    "name": "John Doe",
+    "name": "Sherlock Holmes",
     "title": "",
-    "age": 43,
+    "age": 34,
+    "personal_data": {
+      "gender": "male",
+      "marital_status": "single"
+    },
     "address": {
       "street": "10 Downing Street",
       "city": "London",
-      "zip": "12345"
+      "zip": "12345",
+      "country_code": "UK"
+    },
+    "phones": ["+44 1234567", "+44 2345678", 12311, { "mobile": "+44 3456789" }]
+  },
+  {
+    "name": "Tony Soprano",
+    "title": "",
+    "age": 39,
+    "personal_data": {
+      "gender": "male",
+      "marital_status": "married"
+    },
+    "address": {
+      "street": "14 Aspen Drive",
+      "city": "Caldwell",
+      "zip": "NJ 07006",
+      "country": "USA",
+      "state": "New Jersey",
+      "country_code": "US"
     },
     "phones": [
-      "+44 1234567",
-      "+44 2345678",
-      123456,
-      { "mobile": "+44 3456789" }
+      "+1 1234567",
+      "+1 2345678",
+      "+1 11111111111",
+      "+1 301234566",
+      11224234,
+      { "mobile": "+1 3456789" }
     ]
   },
   {
-    "name": "Jerry-Pascal Doe",
+    "name": "Angela Merkel",
     "title": "",
-    "age": 56,
+    "age": 65,
+    "personal_data": {
+      "gender": "female",
+      "marital_status": "married"
+    },
     "address": {
       "street": "Gr. Weg 3",
       "city": "Potsdam",
-      "zip": ""
+      "zip": "14467",
+      "country": "Germany",
+      "state": "Brandenburg"
     },
     "phones": [
-      "+49 1234567",
-      "+49 2345678",
-      "+49 11111111111",
-      "+49 301234566",
-      123456,
-      { "mobile": "+49 3456789" }
+      "+49 1234222567",
+      "+49 2343231678",
+      "+49 1111131111111",
+      "+49 301212334566",
+      9999222,
+      { "mobile": "+49 343156789", "fax": "+49 343156780" }
     ]
   },
   {
     "name": "Jane Doe",
     "title": "Dr.",
-    "age": "66",
+    "age": "73",
+    "personal_data": {
+      "gender": "female"
+    },
     "address": null,
     "phones": null
   }
 ]
 ```
 
-```bash
+````bash
 schermz -f ./sample.json
 
+```json
 {
   "address": {
     "types": [
@@ -76,17 +111,81 @@ schermz -f ./sample.json
       {
         "city": {
           "types": [
-            "STRING(6, 7)"
+            "STRING(6)"
+          ]
+        },
+        "country_code": {
+          "types": [
+            "STRING(2)"
           ]
         },
         "street": {
           "types": [
-            "STRING(9, 17)"
+            "STRING(17)"
           ]
         },
         "zip": {
           "types": [
-            "STRING(0, 5)"
+            "STRING(5)"
+          ]
+        }
+      },
+      {
+        "city": {
+          "types": [
+            "STRING(8)"
+          ]
+        },
+        "country": {
+          "types": [
+            "STRING(3)"
+          ]
+        },
+        "country_code": {
+          "types": [
+            "STRING(2)"
+          ]
+        },
+        "state": {
+          "types": [
+            "STRING(10)"
+          ]
+        },
+        "street": {
+          "types": [
+            "STRING(14)"
+          ]
+        },
+        "zip": {
+          "types": [
+            "STRING(8)"
+          ]
+        }
+      },
+      {
+        "city": {
+          "types": [
+            "STRING(7)"
+          ]
+        },
+        "country": {
+          "types": [
+            "STRING(7)"
+          ]
+        },
+        "state": {
+          "types": [
+            "STRING(11)"
+          ]
+        },
+        "street": {
+          "types": [
+            "STRING(9)"
+          ]
+        },
+        "zip": {
+          "types": [
+            "STRING(5)"
           ]
         }
       }
@@ -100,7 +199,30 @@ schermz -f ./sample.json
   },
   "name": {
     "types": [
-      "STRING(8, 16)"
+      "STRING(8, 15)"
+    ]
+  },
+  "personal_data": {
+    "types": [
+      {
+        "gender": {
+          "types": [
+            "STRING(4, 6)"
+          ]
+        },
+        "marital_status": {
+          "types": [
+            "STRING(6, 7)"
+          ]
+        }
+      },
+      {
+        "gender": {
+          "types": [
+            "STRING(6)"
+          ]
+        }
+      }
     ]
   },
   "phones": {
@@ -111,12 +233,24 @@ schermz -f ./sample.json
           {
             "mobile": {
               "types": [
-                "STRING(11)"
+                "STRING(10, 11)"
+              ]
+            }
+          },
+          {
+            "fax": {
+              "types": [
+                "STRING(13)"
+              ]
+            },
+            "mobile": {
+              "types": [
+                "STRING(13)"
               ]
             }
           },
           "NUMBER",
-          "STRING(11, 15)"
+          "STRING(10, 17)"
         ]
       }
     ]
@@ -128,3 +262,4 @@ schermz -f ./sample.json
   }
 }
 ```
+````
