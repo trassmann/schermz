@@ -100,10 +100,9 @@ schermz -f <path to json file>
 ]
 ```
 
-````bash
+```bash
 schermz -f ./sample.json
 
-```json
 {
   "address": {
     "types": [
@@ -262,4 +261,3 @@ schermz -f ./sample.json
   }
 }
 ```
-````
