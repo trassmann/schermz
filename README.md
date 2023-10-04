@@ -18,10 +18,10 @@ schermz -f <path to json file>
 
 ## Output
 
-- `STRING(0, 10)` - This field is a string with a minimum length of 0 and a maximum length of 10.
+String values are analyzed based on their possible lengths.
+
+- `STRING(0, 10)` - This field is a string with a minimum length of 0 (`""`) and a maximum length of 10.
 - `STRING(5)` - This field is a string with a length of 5.
-- `ARRAY` - This field is an array that may contain any of the following types.
-- `{ "key": "value" }` - This field is an object that may contain any of the following keys and values.
 
 ## Example
 
