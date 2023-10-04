@@ -16,6 +16,13 @@ cargo install schermz
 schermz -f <path to json file>
 ```
 
+## Output
+
+- `STRING(0, 10)` - This field is a string with a minimum length of 0 and a maximum length of 10.
+- `STRING(5)` - This field is a string with a length of 5.
+- `ARRAY` - This field is an array that may contain any of the following types.
+- `{ "key": "value" }` - This field is an object that may contain any of the following keys and values.
+
 ## Example
 
 `sample.json`
@@ -109,117 +116,76 @@ schermz -f ./sample.json
       "NULL",
       {
         "city": {
-          "types": [
-            "STRING(6)"
-          ]
+          "types": ["STRING(6)"]
         },
         "country_code": {
-          "types": [
-            "STRING(2)"
-          ]
+          "types": ["STRING(2)"]
         },
         "street": {
-          "types": [
-            "STRING(17)"
-          ]
+          "types": ["STRING(17)"]
         },
         "zip": {
-          "types": [
-            "STRING(5)"
-          ]
+          "types": ["STRING(5)"]
         }
       },
       {
         "city": {
-          "types": [
-            "STRING(8)"
-          ]
+          "types": ["STRING(8)"]
         },
         "country": {
-          "types": [
-            "STRING(3)"
-          ]
+          "types": ["STRING(3)"]
         },
         "country_code": {
-          "types": [
-            "STRING(2)"
-          ]
+          "types": ["STRING(2)"]
         },
         "state": {
-          "types": [
-            "STRING(10)"
-          ]
+          "types": ["STRING(10)"]
         },
         "street": {
-          "types": [
-            "STRING(14)"
-          ]
+          "types": ["STRING(14)"]
         },
         "zip": {
-          "types": [
-            "STRING(8)"
-          ]
+          "types": ["STRING(8)"]
         }
       },
       {
         "city": {
-          "types": [
-            "STRING(7)"
-          ]
+          "types": ["STRING(7)"]
         },
         "country": {
-          "types": [
-            "STRING(7)"
-          ]
+          "types": ["STRING(7)"]
         },
         "state": {
-          "types": [
-            "STRING(11)"
-          ]
+          "types": ["STRING(11)"]
         },
         "street": {
-          "types": [
-            "STRING(9)"
-          ]
+          "types": ["STRING(9)"]
         },
         "zip": {
-          "types": [
-            "STRING(5)"
-          ]
+          "types": ["STRING(5)"]
         }
       }
     ]
   },
   "age": {
-    "types": [
-      "NUMBER",
-      "STRING(2)"
-    ]
+    "types": ["NUMBER", "STRING(2)"]
   },
   "name": {
-    "types": [
-      "STRING(8, 15)"
-    ]
+    "types": ["STRING(8, 15)"]
   },
   "personal_data": {
     "types": [
       {
         "gender": {
-          "types": [
-            "STRING(4, 6)"
-          ]
+          "types": ["STRING(4, 6)"]
         },
         "marital_status": {
-          "types": [
-            "STRING(6, 7)"
-          ]
+          "types": ["STRING(6, 7)"]
         }
       },
       {
         "gender": {
-          "types": [
-            "STRING(6)"
-          ]
+          "types": ["STRING(6)"]
         }
       }
     ]
@@ -231,21 +197,15 @@ schermz -f ./sample.json
         "ARRAY": [
           {
             "mobile": {
-              "types": [
-                "STRING(10, 11)"
-              ]
+              "types": ["STRING(10, 11)"]
             }
           },
           {
             "fax": {
-              "types": [
-                "STRING(13)"
-              ]
+              "types": ["STRING(13)"]
             },
             "mobile": {
-              "types": [
-                "STRING(13)"
-              ]
+              "types": ["STRING(13)"]
             }
           },
           "NUMBER",
@@ -255,9 +215,8 @@ schermz -f ./sample.json
     ]
   },
   "title": {
-    "types": [
-      "STRING(0, 3)"
-    ]
+    "types": ["STRING(0, 3)"]
   }
 }
+
 ```
