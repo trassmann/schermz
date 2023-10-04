@@ -1,5 +1,8 @@
+use itertools::Itertools;
 use serde_json::Value as JsonValue;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone)]
 enum ValueType {
@@ -191,15 +194,64 @@ impl Schema {
 
         for (key, value) in object_types {
             let name = key.clone();
-            map.entry(key)
-                .or_insert_with(Vec::new)
-                .push(SchemaValueType::Object(Schema::from_objects(name, value)));
+            let grouped_objects = value
+                .into_iter()
+                .group_by(|obj| {
+                    let mut hasher = DefaultHasher::new();
+                    let sorted_keys = obj
+                        .keys
+                        .clone()
+                        .into_iter()
+                        .map(|obj_key| obj_key.id)
+                        .sorted()
+                        .collect::<Vec<String>>();
+                    let stringified_keys = sorted_keys.join("");
+                    stringified_keys.hash(&mut hasher);
+                    hasher.finish()
+                })
+                .into_iter()
+                .map(|(_, gr)| gr.collect_vec())
+                .collect::<Vec<_>>();
+
+            for objects_group in grouped_objects {
+                map.entry(key.clone())
+                    .or_insert_with(Vec::new)
+                    .push(SchemaValueType::Object(Schema::from_objects(
+                        name.clone(),
+                        objects_group,
+                    )));
+            }
         }
 
         for (key, value) in array_object_types {
             let name = key.clone();
-            let schema = Schema::from_objects(name.clone(), value);
-            let mut all_array_types = vec![SchemaValueType::Object(schema)];
+            let grouped_objects = value
+                .into_iter()
+                .group_by(|obj| {
+                    let mut hasher = DefaultHasher::new();
+                    let sorted_keys = obj
+                        .keys
+                        .clone()
+                        .into_iter()
+                        .map(|obj_key| obj_key.id)
+                        .sorted()
+                        .collect::<Vec<String>>();
+                    let stringified_keys = sorted_keys.join("");
+                    stringified_keys.hash(&mut hasher);
+                    hasher.finish()
+                })
+                .into_iter()
+                .map(|(_, gr)| gr.collect_vec())
+                .collect::<Vec<_>>();
+
+            let mut all_array_types = Vec::new();
+            for objects_group in grouped_objects {
+                all_array_types.push(SchemaValueType::Object(Schema::from_objects(
+                    name.clone(),
+                    objects_group,
+                )));
+            }
+
             if let Some(primitive_types) = array_primitive_types_map.get_mut(&name) {
                 all_array_types.append(primitive_types);
             }
@@ -299,43 +351,83 @@ mod tests {
     fn test_schema_from_array() {
         let json = serde_json::json!([
             {
-                "name": "John Doe",
+                "name": "Sherlock Holmes",
                 "title": "",
-                "age": 43,
+                "age": 34,
+                "personal_data": {
+                    "gender": "male",
+                    "marital_status": "single",
+                },
                 "address": {
                     "street": "10 Downing Street",
                     "city": "London",
-                    "zip": "12345"
+                    "zip": "12345",
+                    "country_code": "UK",
                 },
                 "phones": [
                     "+44 1234567",
                     "+44 2345678",
-                    123456,
+                    12311,
                     { "mobile": "+44 3456789" }
                 ]
             },
             {
-                "name": "Jerry-Pascal Doe",
+                "name": "Tony Soprano",
                 "title": "",
-                "age": 56,
+                "age": 39,
+                "personal_data": {
+                    "gender": "male",
+                    "marital_status": "married",
+                },
+                "address": {
+                    "street": "14 Aspen Drive",
+                    "city": "Caldwell",
+                    "zip": "NJ 07006",
+                    "country": "USA",
+                    "state": "New Jersey",
+                    "country_code": "US",
+                },
+                "phones": [
+                    "+1 1234567",
+                    "+1 2345678",
+                    "+1 11111111111",
+                    "+1 301234566",
+                    11224234,
+                    { "mobile": "+1 3456789" }
+                ]
+            },
+            {
+                "name": "Angela Merkel",
+                "title": "",
+                "age": 65,
+                "personal_data": {
+                    "gender": "female",
+                    "marital_status": "married",
+                },
                 "address": {
                     "street": "Gr. Weg 3",
                     "city": "Potsdam",
-                    "zip": ""
+                    "zip": "14467",
+                    "country": "Germany",
+                    "state": "Brandenburg",
+
                 },
                 "phones": [
-                    "+49 1234567",
-                    "+49 2345678",
-                    "+49 11111111111",
-                    "+49 301234566",
-                    123456,
-                    { "mobile": "+49 3456789" }
+                    "+49 1234222567",
+                    "+49 2343231678",
+                    "+49 1111131111111",
+                    "+49 301212334566",
+                    9999222,
+                    { "mobile": "+49 343156789", "fax": "+49 343156780" }
                 ]
             },
             {
                 "name": "Jane Doe",
                 "title": "Dr.",
-                "age": "66",
+                "age": "73",
+                "personal_data": {
+                    "gender": "female",
+                },
                 "address": null,
                 "phones": null
             }

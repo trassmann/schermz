@@ -9,17 +9,81 @@ expression: "Schema::from_json(&json).to_json()"
       {
         "city": {
           "types": [
-            "STRING(6, 7)"
+            "STRING(6)"
+          ]
+        },
+        "country_code": {
+          "types": [
+            "STRING(2)"
           ]
         },
         "street": {
           "types": [
-            "STRING(9, 17)"
+            "STRING(17)"
           ]
         },
         "zip": {
           "types": [
-            "STRING(0, 5)"
+            "STRING(5)"
+          ]
+        }
+      },
+      {
+        "city": {
+          "types": [
+            "STRING(8)"
+          ]
+        },
+        "country": {
+          "types": [
+            "STRING(3)"
+          ]
+        },
+        "country_code": {
+          "types": [
+            "STRING(2)"
+          ]
+        },
+        "state": {
+          "types": [
+            "STRING(10)"
+          ]
+        },
+        "street": {
+          "types": [
+            "STRING(14)"
+          ]
+        },
+        "zip": {
+          "types": [
+            "STRING(8)"
+          ]
+        }
+      },
+      {
+        "city": {
+          "types": [
+            "STRING(7)"
+          ]
+        },
+        "country": {
+          "types": [
+            "STRING(7)"
+          ]
+        },
+        "state": {
+          "types": [
+            "STRING(11)"
+          ]
+        },
+        "street": {
+          "types": [
+            "STRING(9)"
+          ]
+        },
+        "zip": {
+          "types": [
+            "STRING(5)"
           ]
         }
       }
@@ -33,7 +97,30 @@ expression: "Schema::from_json(&json).to_json()"
   },
   "name": {
     "types": [
-      "STRING(8, 16)"
+      "STRING(8, 15)"
+    ]
+  },
+  "personal_data": {
+    "types": [
+      {
+        "gender": {
+          "types": [
+            "STRING(4, 6)"
+          ]
+        },
+        "marital_status": {
+          "types": [
+            "STRING(6, 7)"
+          ]
+        }
+      },
+      {
+        "gender": {
+          "types": [
+            "STRING(6)"
+          ]
+        }
+      }
     ]
   },
   "phones": {
@@ -44,12 +131,24 @@ expression: "Schema::from_json(&json).to_json()"
           {
             "mobile": {
               "types": [
-                "STRING(11)"
+                "STRING(10, 11)"
+              ]
+            }
+          },
+          {
+            "fax": {
+              "types": [
+                "STRING(13)"
+              ]
+            },
+            "mobile": {
+              "types": [
+                "STRING(13)"
               ]
             }
           },
           "NUMBER",
-          "STRING(11, 15)"
+          "STRING(10, 17)"
         ]
       }
     ]
