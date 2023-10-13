@@ -121,6 +121,27 @@ pub struct Schema {
 type CollectedObjects = HashMap<String, Vec<SchemaObject>>;
 
 impl Schema {
+    // Groups objects by a hash created from their keys
+    fn group_objects_by_keys_fingerprint(objects: Vec<SchemaObject>) -> Vec<Vec<SchemaObject>> {
+        objects
+            .into_iter()
+            .group_by(|obj| {
+                let mut hasher = DefaultHasher::new();
+                let sorted_keys = obj
+                    .keys
+                    .clone()
+                    .into_iter()
+                    .map(|obj_key| obj_key.id)
+                    .sorted()
+                    .collect::<Vec<String>>();
+                let stringified_keys = sorted_keys.join("");
+                stringified_keys.hash(&mut hasher);
+                hasher.finish()
+            })
+            .into_iter()
+            .map(|(_, gr)| gr.collect_vec())
+            .collect()
+    }
     fn create_map(objects: Vec<SchemaObject>) -> HashMap<String, Vec<SchemaValueType>> {
         let mut map = HashMap::<String, Vec<SchemaValueType>>::new();
         let mut string_lens = HashMap::<String, Vec<usize>>::new();
@@ -193,69 +214,29 @@ impl Schema {
         }
 
         for (key, value) in object_types {
-            let name = key.clone();
-            let grouped_objects = value
-                .into_iter()
-                .group_by(|obj| {
-                    let mut hasher = DefaultHasher::new();
-                    let sorted_keys = obj
-                        .keys
-                        .clone()
-                        .into_iter()
-                        .map(|obj_key| obj_key.id)
-                        .sorted()
-                        .collect::<Vec<String>>();
-                    let stringified_keys = sorted_keys.join("");
-                    stringified_keys.hash(&mut hasher);
-                    hasher.finish()
-                })
-                .into_iter()
-                .map(|(_, gr)| gr.collect_vec())
-                .collect::<Vec<_>>();
-
-            for objects_group in grouped_objects {
+            for objects_group in Self::group_objects_by_keys_fingerprint(value) {
                 map.entry(key.clone())
                     .or_insert_with(Vec::new)
                     .push(SchemaValueType::Object(Schema::from_objects(
-                        name.clone(),
+                        key.clone(),
                         objects_group,
                     )));
             }
         }
 
         for (key, value) in array_object_types {
-            let name = key.clone();
-            let grouped_objects = value
-                .into_iter()
-                .group_by(|obj| {
-                    let mut hasher = DefaultHasher::new();
-                    let sorted_keys = obj
-                        .keys
-                        .clone()
-                        .into_iter()
-                        .map(|obj_key| obj_key.id)
-                        .sorted()
-                        .collect::<Vec<String>>();
-                    let stringified_keys = sorted_keys.join("");
-                    stringified_keys.hash(&mut hasher);
-                    hasher.finish()
-                })
-                .into_iter()
-                .map(|(_, gr)| gr.collect_vec())
-                .collect::<Vec<_>>();
-
             let mut all_array_types = Vec::new();
-            for objects_group in grouped_objects {
+            for objects_group in Self::group_objects_by_keys_fingerprint(value) {
                 all_array_types.push(SchemaValueType::Object(Schema::from_objects(
-                    name.clone(),
+                    key.clone(),
                     objects_group,
                 )));
             }
 
-            if let Some(primitive_types) = array_primitive_types_map.get_mut(&name) {
+            if let Some(primitive_types) = array_primitive_types_map.get_mut(&key) {
                 all_array_types.append(primitive_types);
             }
-            if let Some(string_lens) = array_string_lens_map.get_mut(&name) {
+            if let Some(string_lens) = array_string_lens_map.get_mut(&key) {
                 let min = string_lens.iter().min().unwrap();
                 let max = string_lens.iter().max().unwrap();
                 all_array_types.push(SchemaValueType::String(*min, *max));
