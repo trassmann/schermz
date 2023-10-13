@@ -1,0 +1,98 @@
+---
+source: src/schema.rs
+expression: "Schema::from_json(&json, true).to_json()"
+---
+{
+  "address": {
+    "types": [
+      "NULL",
+      {
+        "city": {
+          "types": [
+            "STRING(6, 8)"
+          ]
+        },
+        "country": {
+          "types": [
+            "STRING(3, 7)"
+          ]
+        },
+        "country_code": {
+          "types": [
+            "STRING(2)"
+          ]
+        },
+        "state": {
+          "types": [
+            "STRING(10, 11)"
+          ]
+        },
+        "street": {
+          "types": [
+            "STRING(9, 17)"
+          ]
+        },
+        "zip": {
+          "types": [
+            "STRING(5, 8)"
+          ]
+        }
+      }
+    ]
+  },
+  "age": {
+    "types": [
+      "NUMBER",
+      "STRING(2)"
+    ]
+  },
+  "name": {
+    "types": [
+      "STRING(8, 15)"
+    ]
+  },
+  "personal_data": {
+    "types": [
+      {
+        "gender": {
+          "types": [
+            "STRING(4, 6)"
+          ]
+        },
+        "marital_status": {
+          "types": [
+            "STRING(6, 7)"
+          ]
+        }
+      }
+    ]
+  },
+  "phones": {
+    "types": [
+      "NULL",
+      {
+        "ARRAY": [
+          {
+            "fax": {
+              "types": [
+                "STRING(13)"
+              ]
+            },
+            "mobile": {
+              "types": [
+                "STRING(10, 13)"
+              ]
+            }
+          },
+          "NUMBER",
+          "STRING(10, 17)"
+        ]
+      }
+    ]
+  },
+  "title": {
+    "types": [
+      "STRING(0, 3)"
+    ]
+  }
+}

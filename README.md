@@ -13,7 +13,97 @@ cargo install schermz
 ## Usage
 
 ```bash
-schermz -f <path to json file>
+A tool to generate a schema for a given JSON file.
+
+Usage: schermz [OPTIONS] --file <FILE>
+
+Options:
+  -f, --file <FILE>    Path to the JSON file
+  -m, --merge-objects  Whether to merge object types into one
+  -h, --help           Print help
+  -V, --version        Print version
+```
+
+## The `-m` argument
+
+When this argument is passed to schermz, all objects for the same key will be merged into one, meaning, if a key can have multiple different object shapes, they will not be listed separately. This is useful when you want to get a general idea of the data, or you trust that the data is consistent.
+
+Here's a simple example:
+
+`sample.json`
+
+```json
+[
+  {
+    "x": {
+      "name": "Martin",
+      "age": 30
+    }
+  },
+  {
+    "x": {
+      "name": "Paul"
+    }
+  }
+]
+```
+
+### Without `-m` (default)
+
+```bash
+schermz -f ./sample.json
+
+{
+  "x": {
+    "types": [
+      {
+        "age": {
+          "types": [
+            "NUMBER"
+          ]
+        },
+        "name": {
+          "types": [
+            "STRING(6)"
+          ]
+        }
+      },
+      {
+        "name": {
+          "types": [
+            "STRING(4)"
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+### With `-m`
+
+```bash
+schermz -m -f ./sample.json
+
+{
+  "x": {
+    "types": [
+      {
+        "age": {
+          "types": [
+            "NUMBER"
+          ]
+        },
+        "name": {
+          "types": [
+            "STRING(4, 6)"
+          ]
+        }
+      }
+    ]
+  }
+}
+
 ```
 
 ## Output
