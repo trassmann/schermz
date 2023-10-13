@@ -158,7 +158,7 @@ impl Schema {
                         // so we can merge them together into a single schema
                         object_types
                             .entry(key.id.clone())
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .push(obj.clone());
                     }
                     ValueType::Array(arr) => {
@@ -167,19 +167,19 @@ impl Schema {
                                 ValueType::Object(obj) => {
                                     array_object_types
                                         .entry(key.id.clone())
-                                        .or_insert_with(Vec::new)
+                                        .or_default()
                                         .push(obj.clone());
                                 }
                                 ValueType::String(len) => {
                                     array_string_lens_map
                                         .entry(key.id.clone())
-                                        .or_insert_with(Vec::new)
+                                        .or_default()
                                         .push(*len);
                                 }
                                 primitive_type => {
                                     let entry = array_primitive_types_map
                                         .entry(key.id.clone())
-                                        .or_insert_with(Vec::new);
+                                        .or_default();
                                     let vtype = primitive_type.to_schema_value_type();
                                     if !entry.contains(&vtype) {
                                         entry.push(vtype);
@@ -189,13 +189,10 @@ impl Schema {
                         }
                     }
                     ValueType::String(len) => {
-                        string_lens
-                            .entry(key.id.clone())
-                            .or_insert_with(Vec::new)
-                            .push(*len);
+                        string_lens.entry(key.id.clone()).or_default().push(*len);
                     }
                     primitive_type => {
-                        let entry = map.entry(key.id.clone()).or_insert_with(Vec::new);
+                        let entry = map.entry(key.id.clone()).or_default();
                         let vtype = primitive_type.to_schema_value_type();
                         if !entry.contains(&vtype) {
                             entry.push(vtype);
@@ -209,14 +206,14 @@ impl Schema {
             let min = value.iter().min().unwrap();
             let max = value.iter().max().unwrap();
             map.entry(key)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(SchemaValueType::String(*min, *max));
         }
 
         for (key, value) in object_types {
             for objects_group in Self::group_objects_by_keys_fingerprint(value) {
                 map.entry(key.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(SchemaValueType::Object(Schema::from_objects(
                         key.clone(),
                         objects_group,
@@ -242,7 +239,7 @@ impl Schema {
                 all_array_types.push(SchemaValueType::String(*min, *max));
             }
             map.entry(key)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(SchemaValueType::Array(all_array_types));
         }
 
