@@ -35,13 +35,13 @@ Here's a simple example:
 ```json
 [
   {
-    "x": {
+    "info": {
       "name": "Martin",
       "age": 30
     }
   },
   {
-    "x": {
+    "info": {
       "name": "Paul"
     }
   }
@@ -54,7 +54,7 @@ Here's a simple example:
 schermz -f ./sample.json
 
 {
-  "x": {
+  "info": {
     "types": [
       {
         "age": {
@@ -86,7 +86,7 @@ schermz -f ./sample.json
 schermz -m -f ./sample.json
 
 {
-  "x": {
+  "info": {
     "types": [
       {
         "age": {
