@@ -220,11 +220,9 @@ impl Schema {
             match merge_objects {
                 true => {
                     let name = key.clone();
-                    map.entry(key)
-                        .or_insert_with(Vec::new)
-                        .push(SchemaValueType::Object(Schema::from_objects(
-                            name, value, true,
-                        )));
+                    map.entry(key).or_default().push(SchemaValueType::Object(
+                        Schema::from_objects(name, value, true),
+                    ));
                 }
                 false => {
                     for objects_group in Self::group_objects_by_keys_fingerprint(value) {
