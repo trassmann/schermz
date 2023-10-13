@@ -43,18 +43,20 @@ impl ValueType {
         }
     }
 
-    pub fn to_schema_value_type(&self) -> SchemaValueType {
+    pub fn to_schema_value_type(&self, merge_objects: bool) -> SchemaValueType {
         match self {
             ValueType::Null => SchemaValueType::Primitive("NULL".into()),
             ValueType::Bool => SchemaValueType::Primitive("BOOL".into()),
             ValueType::Number => SchemaValueType::Primitive("NUMBER".into()),
-            ValueType::Object(obj) => {
-                SchemaValueType::Object(Schema::from_objects("object".into(), vec![obj.clone()]))
-            }
+            ValueType::Object(obj) => SchemaValueType::Object(Schema::from_objects(
+                "object".into(),
+                vec![obj.clone()],
+                merge_objects,
+            )),
             ValueType::Array(arr) => {
                 let mut value_types = arr
                     .iter()
-                    .map(|value_type| value_type.to_schema_value_type())
+                    .map(|value_type| value_type.to_schema_value_type(merge_objects))
                     .collect::<Vec<SchemaValueType>>();
 
                 value_types.dedup();
@@ -142,7 +144,11 @@ impl Schema {
             .map(|(_, gr)| gr.collect_vec())
             .collect()
     }
-    fn create_map(objects: Vec<SchemaObject>) -> HashMap<String, Vec<SchemaValueType>> {
+
+    fn create_map(
+        objects: Vec<SchemaObject>,
+        merge_objects: bool,
+    ) -> HashMap<String, Vec<SchemaValueType>> {
         let mut map = HashMap::<String, Vec<SchemaValueType>>::new();
         let mut string_lens = HashMap::<String, Vec<usize>>::new();
         let mut object_types = CollectedObjects::new();
@@ -180,7 +186,7 @@ impl Schema {
                                     let entry = array_primitive_types_map
                                         .entry(key.id.clone())
                                         .or_default();
-                                    let vtype = primitive_type.to_schema_value_type();
+                                    let vtype = primitive_type.to_schema_value_type(merge_objects);
                                     if !entry.contains(&vtype) {
                                         entry.push(vtype);
                                     }
@@ -193,7 +199,7 @@ impl Schema {
                     }
                     primitive_type => {
                         let entry = map.entry(key.id.clone()).or_default();
-                        let vtype = primitive_type.to_schema_value_type();
+                        let vtype = primitive_type.to_schema_value_type(merge_objects);
                         if !entry.contains(&vtype) {
                             entry.push(vtype);
                         }
@@ -211,23 +217,46 @@ impl Schema {
         }
 
         for (key, value) in object_types {
-            for objects_group in Self::group_objects_by_keys_fingerprint(value) {
-                map.entry(key.clone())
-                    .or_default()
-                    .push(SchemaValueType::Object(Schema::from_objects(
-                        key.clone(),
-                        objects_group,
-                    )));
+            match merge_objects {
+                true => {
+                    let name = key.clone();
+                    map.entry(key)
+                        .or_insert_with(Vec::new)
+                        .push(SchemaValueType::Object(Schema::from_objects(
+                            name, value, true,
+                        )));
+                }
+                false => {
+                    for objects_group in Self::group_objects_by_keys_fingerprint(value) {
+                        map.entry(key.clone())
+                            .or_default()
+                            .push(SchemaValueType::Object(Schema::from_objects(
+                                key.clone(),
+                                objects_group,
+                                false,
+                            )));
+                    }
+                }
             }
         }
 
         for (key, value) in array_object_types {
             let mut all_array_types = Vec::new();
-            for objects_group in Self::group_objects_by_keys_fingerprint(value) {
-                all_array_types.push(SchemaValueType::Object(Schema::from_objects(
-                    key.clone(),
-                    objects_group,
-                )));
+
+            match merge_objects {
+                true => {
+                    let schema = Schema::from_objects(key.clone(), value, true);
+                    all_array_types = vec![SchemaValueType::Object(schema)];
+                }
+                false => {
+                    for objects_group in Self::group_objects_by_keys_fingerprint(value) {
+                        all_array_types.push(SchemaValueType::Object(Schema::from_objects(
+                            key.clone(),
+                            objects_group,
+                            false,
+                        )));
+                    }
+                }
             }
 
             if let Some(primitive_types) = array_primitive_types_map.get_mut(&key) {
@@ -246,10 +275,10 @@ impl Schema {
         map
     }
 
-    fn from_objects(name: String, objects: Vec<SchemaObject>) -> Self {
+    fn from_objects(name: String, objects: Vec<SchemaObject>, merge_objects: bool) -> Self {
         Self {
             name,
-            map: Self::create_map(objects),
+            map: Self::create_map(objects, merge_objects),
         }
     }
 
@@ -271,11 +300,13 @@ impl Schema {
         serde_json::Value::Object(map)
     }
 
-    pub fn from_json(json: &JsonValue) -> Self {
+    pub fn from_json(json: &JsonValue, merge_objects: bool) -> Self {
         match json {
-            JsonValue::Object(_) => {
-                Self::from_objects("root".into(), vec![SchemaObject::from_json(json)])
-            }
+            JsonValue::Object(_) => Self::from_objects(
+                "root".into(),
+                vec![SchemaObject::from_json(json)],
+                merge_objects,
+            ),
             JsonValue::Array(_) => {
                 let objects = json
                     .as_array()
@@ -287,7 +318,7 @@ impl Schema {
                     })
                     .collect::<Vec<SchemaObject>>();
 
-                Self::from_objects("root".into(), objects)
+                Self::from_objects("root".into(), objects, merge_objects)
             }
             _ => panic!("Invalid JSON"),
         }
@@ -301,7 +332,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn invalid_input() {
-        Schema::from_json(&serde_json::Value::Null);
+        Schema::from_json(&serde_json::Value::Null, false);
     }
 
     #[test]
@@ -322,11 +353,11 @@ mod tests {
             ]
         });
 
-        insta::assert_json_snapshot!(Schema::from_json(&json).to_json());
+        insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
     }
 
     #[test]
-    fn test_schema_from_array() {
+    fn test_schema_from_array_merged() {
         let json = serde_json::json!([
             {
                 "name": "Sherlock Holmes",
@@ -411,6 +442,95 @@ mod tests {
             }
         ]);
 
-        insta::assert_json_snapshot!(Schema::from_json(&json).to_json());
+        insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
+    }
+
+    #[test]
+    fn test_schema_from_array_unmerged() {
+        let json = serde_json::json!([
+            {
+                "name": "Sherlock Holmes",
+                "title": "",
+                "age": 34,
+                "personal_data": {
+                    "gender": "male",
+                    "marital_status": "single",
+                },
+                "address": {
+                    "street": "10 Downing Street",
+                    "city": "London",
+                    "zip": "12345",
+                    "country_code": "UK",
+                },
+                "phones": [
+                    "+44 1234567",
+                    "+44 2345678",
+                    12311,
+                    { "mobile": "+44 3456789" }
+                ]
+            },
+            {
+                "name": "Tony Soprano",
+                "title": "",
+                "age": 39,
+                "personal_data": {
+                    "gender": "male",
+                    "marital_status": "married",
+                },
+                "address": {
+                    "street": "14 Aspen Drive",
+                    "city": "Caldwell",
+                    "zip": "NJ 07006",
+                    "country": "USA",
+                    "state": "New Jersey",
+                    "country_code": "US",
+                },
+                "phones": [
+                    "+1 1234567",
+                    "+1 2345678",
+                    "+1 11111111111",
+                    "+1 301234566",
+                    11224234,
+                    { "mobile": "+1 3456789" }
+                ]
+            },
+            {
+                "name": "Angela Merkel",
+                "title": "",
+                "age": 65,
+                "personal_data": {
+                    "gender": "female",
+                    "marital_status": "married",
+                },
+                "address": {
+                    "street": "Gr. Weg 3",
+                    "city": "Potsdam",
+                    "zip": "14467",
+                    "country": "Germany",
+                    "state": "Brandenburg",
+
+                },
+                "phones": [
+                    "+49 1234222567",
+                    "+49 2343231678",
+                    "+49 1111131111111",
+                    "+49 301212334566",
+                    9999222,
+                    { "mobile": "+49 343156789", "fax": "+49 343156780" }
+                ]
+            },
+            {
+                "name": "Jane Doe",
+                "title": "Dr.",
+                "age": "73",
+                "personal_data": {
+                    "gender": "female",
+                },
+                "address": null,
+                "phones": null
+            }
+        ]);
+
+        insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
     }
 }

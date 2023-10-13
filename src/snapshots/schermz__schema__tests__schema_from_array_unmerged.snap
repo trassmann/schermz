@@ -1,0 +1,161 @@
+---
+source: src/schema.rs
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{
+  "address": {
+    "types": [
+      "NULL",
+      {
+        "city": {
+          "types": [
+            "STRING(6)"
+          ]
+        },
+        "country_code": {
+          "types": [
+            "STRING(2)"
+          ]
+        },
+        "street": {
+          "types": [
+            "STRING(17)"
+          ]
+        },
+        "zip": {
+          "types": [
+            "STRING(5)"
+          ]
+        }
+      },
+      {
+        "city": {
+          "types": [
+            "STRING(8)"
+          ]
+        },
+        "country": {
+          "types": [
+            "STRING(3)"
+          ]
+        },
+        "country_code": {
+          "types": [
+            "STRING(2)"
+          ]
+        },
+        "state": {
+          "types": [
+            "STRING(10)"
+          ]
+        },
+        "street": {
+          "types": [
+            "STRING(14)"
+          ]
+        },
+        "zip": {
+          "types": [
+            "STRING(8)"
+          ]
+        }
+      },
+      {
+        "city": {
+          "types": [
+            "STRING(7)"
+          ]
+        },
+        "country": {
+          "types": [
+            "STRING(7)"
+          ]
+        },
+        "state": {
+          "types": [
+            "STRING(11)"
+          ]
+        },
+        "street": {
+          "types": [
+            "STRING(9)"
+          ]
+        },
+        "zip": {
+          "types": [
+            "STRING(5)"
+          ]
+        }
+      }
+    ]
+  },
+  "age": {
+    "types": [
+      "NUMBER",
+      "STRING(2)"
+    ]
+  },
+  "name": {
+    "types": [
+      "STRING(8, 15)"
+    ]
+  },
+  "personal_data": {
+    "types": [
+      {
+        "gender": {
+          "types": [
+            "STRING(4, 6)"
+          ]
+        },
+        "marital_status": {
+          "types": [
+            "STRING(6, 7)"
+          ]
+        }
+      },
+      {
+        "gender": {
+          "types": [
+            "STRING(6)"
+          ]
+        }
+      }
+    ]
+  },
+  "phones": {
+    "types": [
+      "NULL",
+      {
+        "ARRAY": [
+          {
+            "mobile": {
+              "types": [
+                "STRING(10, 11)"
+              ]
+            }
+          },
+          {
+            "fax": {
+              "types": [
+                "STRING(13)"
+              ]
+            },
+            "mobile": {
+              "types": [
+                "STRING(13)"
+              ]
+            }
+          },
+          "NUMBER",
+          "STRING(10, 17)"
+        ]
+      }
+    ]
+  },
+  "title": {
+    "types": [
+      "STRING(0, 3)"
+    ]
+  }
+}
