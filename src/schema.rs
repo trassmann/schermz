@@ -127,7 +127,7 @@ impl Schema {
     fn group_objects_by_keys_fingerprint(objects: Vec<SchemaObject>) -> Vec<Vec<SchemaObject>> {
         objects
             .into_iter()
-            .group_by(|obj| {
+            .chunk_by(|obj| {
                 let mut hasher = DefaultHasher::new();
                 let sorted_keys = obj
                     .keys
