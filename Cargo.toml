@@ -17,5 +17,5 @@ clap = { version = "4.5.38", features = ["derive"] }
 itertools = "0.13.0"
 
 [dev-dependencies]
-insta = { version = "1.43.1", features = ["json"] }
+insta = { version = "1.43.2", features = ["json"] }
  
