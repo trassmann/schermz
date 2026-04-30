@@ -90,6 +90,7 @@ schermz -m -f ./sample.json
     "types": [
       {
         "age": {
+          "optional": true,
           "types": [
             "NUMBER"
           ]
@@ -105,6 +106,38 @@ schermz -m -f ./sample.json
 }
 
 ```
+
+Note `age` is annotated `"optional": true` — it was present on Martin but
+not on Paul. See [Optional fields](#optional-fields) below.
+
+## Optional fields
+
+For every key, schermz reports whether it appeared in 100% of the observed
+parent objects of its enclosing shape. When a key is *not* always present, it
+gets `"optional": true`. Always-present keys carry no annotation, which keeps
+the output tight.
+
+This matters for codegen: it's the difference between `field: T` and
+`field?: T` in TypeScript, or `z.string()` and `z.string().optional()` in Zod.
+
+The denominator depends on context:
+
+- For top-level keys, it's the number of objects in the input array (or 1 for
+  a single-object input — schermz can't infer optionality from a sample size
+  of 1, so nothing is ever marked optional in that case).
+- For nested object keys, it's the number of parents that had this key set to
+  an object of this shape.
+- For object keys inside arrays, it's the total number of object elements
+  observed across all parent arrays.
+
+Without `-m`, distinct object shapes for the same key are listed separately.
+Within any one variant, all objects by definition share the same keys, so
+`optional` won't appear. Use `-m` to flatten variants and reveal which keys
+are sometimes-present in the merged shape.
+
+A key whose value is `null` still counts as "present" for this signal —
+`{ "x": null }` is different from `{}`. The `null` shows up inside `types`,
+not in the optionality flag.
 
 ## Output
 

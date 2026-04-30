@@ -1,0 +1,30 @@
+---
+source: src/schema/tests.rs
+assertion_line: 355
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{
+  "addr": {
+    "types": [
+      {
+        "x": {
+          "types": [
+            "NUMBER"
+          ]
+        },
+        "y": {
+          "types": [
+            "NUMBER"
+          ]
+        }
+      },
+      {
+        "x": {
+          "types": [
+            "NUMBER"
+          ]
+        }
+      }
+    ]
+  }
+}

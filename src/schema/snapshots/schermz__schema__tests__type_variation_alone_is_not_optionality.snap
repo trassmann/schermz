@@ -1,0 +1,13 @@
+---
+source: src/schema/tests.rs
+assertion_line: 391
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{
+  "id": {
+    "types": [
+      "NUMBER",
+      "STRING(3)"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+---
+source: src/schema/tests.rs
+assertion_line: 332
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{
+  "a": {
+    "types": [
+      "NUMBER"
+    ]
+  },
+  "b": {
+    "types": [
+      "NUMBER"
+    ]
+  }
+}

@@ -63,8 +63,15 @@ impl SchemaValueType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+struct KeyEntry {
+    types: Vec<SchemaValueType>,
+    seen_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Schema {
-    pub map: HashMap<String, Vec<SchemaValueType>>,
+    parent_count: usize,
+    map: HashMap<String, KeyEntry>,
 }
 
 type CollectedObjects = HashMap<String, Vec<SchemaObject>>;
@@ -89,11 +96,9 @@ impl Schema {
             .collect()
     }
 
-    fn create_map(
-        objects: Vec<SchemaObject>,
-        merge_objects: bool,
-    ) -> HashMap<String, Vec<SchemaValueType>> {
-        let mut map = HashMap::<String, Vec<SchemaValueType>>::new();
+    fn create_map(objects: Vec<SchemaObject>, merge_objects: bool) -> HashMap<String, KeyEntry> {
+        let mut types_map = HashMap::<String, Vec<SchemaValueType>>::new();
+        let mut seen_counts = HashMap::<String, usize>::new();
         let mut string_lens = HashMap::<String, Vec<usize>>::new();
         let mut object_types = CollectedObjects::new();
         let mut array_object_types = CollectedObjects::new();
@@ -102,6 +107,7 @@ impl Schema {
 
         for obj in objects {
             for key in &obj.keys {
+                *seen_counts.entry(key.id.clone()).or_insert(0) += 1;
                 match &key.v_type {
                     ValueType::Object(obj) => {
                         object_types
@@ -143,7 +149,7 @@ impl Schema {
                         string_lens.entry(key.id.clone()).or_default().push(*len);
                     }
                     primitive_type => {
-                        let entry = map.entry(key.id.clone()).or_default();
+                        let entry = types_map.entry(key.id.clone()).or_default();
                         let vtype = SchemaValueType::from_value_type(primitive_type, merge_objects);
                         if !entry.contains(&vtype) {
                             entry.push(vtype);
@@ -156,19 +162,22 @@ impl Schema {
         for (key, lens) in string_lens {
             let min = *lens.iter().min().unwrap();
             let max = *lens.iter().max().unwrap();
-            map.entry(key)
+            types_map
+                .entry(key)
                 .or_default()
                 .push(SchemaValueType::String(min, max));
         }
 
         for (key, value) in object_types {
             if merge_objects {
-                map.entry(key)
+                types_map
+                    .entry(key)
                     .or_default()
                     .push(SchemaValueType::Object(Schema::from_objects(value, true)));
             } else {
                 for objects_group in Self::group_objects_by_keys_fingerprint(value) {
-                    map.entry(key.clone())
+                    types_map
+                        .entry(key.clone())
                         .or_default()
                         .push(SchemaValueType::Object(Schema::from_objects(
                             objects_group,
@@ -207,16 +216,25 @@ impl Schema {
                 let max = *string_lens.iter().max().unwrap();
                 all_array_types.push(SchemaValueType::String(min, max));
             }
-            map.entry(key)
+            types_map
+                .entry(key)
                 .or_default()
                 .push(SchemaValueType::Array(all_array_types));
         }
 
-        map
+        types_map
+            .into_iter()
+            .map(|(key, types)| {
+                let seen_count = seen_counts.remove(&key).unwrap_or(0);
+                (key, KeyEntry { types, seen_count })
+            })
+            .collect()
     }
 
     fn from_objects(objects: Vec<SchemaObject>, merge_objects: bool) -> Self {
+        let parent_count = objects.len();
         Self {
+            parent_count,
             map: Self::create_map(objects, merge_objects),
         }
     }
@@ -224,11 +242,14 @@ impl Schema {
     pub fn to_json(&self) -> JsonValue {
         let mut map = serde_json::Map::new();
 
-        for (key, value) in &self.map {
-            let mut entry = serde_json::Map::new();
-            let types: Vec<JsonValue> = value.iter().map(SchemaValueType::to_json).collect();
-            entry.insert("types".into(), JsonValue::Array(types));
-            map.insert(key.clone(), JsonValue::Object(entry));
+        for (key, entry) in &self.map {
+            let mut out = serde_json::Map::new();
+            let types: Vec<JsonValue> = entry.types.iter().map(SchemaValueType::to_json).collect();
+            out.insert("types".into(), JsonValue::Array(types));
+            if entry.seen_count < self.parent_count {
+                out.insert("optional".into(), JsonValue::Bool(true));
+            }
+            map.insert(key.clone(), JsonValue::Object(out));
         }
 
         JsonValue::Object(map)
