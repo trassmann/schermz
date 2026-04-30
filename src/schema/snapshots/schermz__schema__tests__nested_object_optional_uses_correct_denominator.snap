@@ -1,24 +1,31 @@
 ---
 source: src/schema/tests.rs
-assertion_line: 113
+assertion_line: 344
 expression: "Schema::from_json(&json, true).to_json()"
 ---
 {
-  "info": {
+  "addr": {
+    "optional": true,
     "types": [
       {
-        "a": {
+        "x": {
           "types": [
             "NUMBER"
           ]
         },
-        "b": {
+        "y": {
           "optional": true,
           "types": [
             "NUMBER"
           ]
         }
       }
+    ]
+  },
+  "other": {
+    "optional": true,
+    "types": [
+      "NUMBER"
     ]
   }
 }

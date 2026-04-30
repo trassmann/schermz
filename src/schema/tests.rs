@@ -311,3 +311,82 @@ fn test_schema_from_array_unmerged() {
 
     insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
 }
+
+// ---------- Feature 1: optionality tracking ----------
+
+#[test]
+fn optional_top_level_key_in_array() {
+    // `b` is missing from one of three parents -> optional. `a` always present.
+    let json = serde_json::json!([
+        { "a": 1 },
+        { "a": 2, "b": 20 },
+        { "a": 3 }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+}
+
+#[test]
+fn single_object_input_never_marks_optional() {
+    // Sample size of 1 -> we can't infer optionality.
+    let json = serde_json::json!({ "a": 1, "b": 2 });
+    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+}
+
+#[test]
+fn nested_object_optional_uses_correct_denominator() {
+    // outer "addr" is present in 2/3 parents (one entry has no addr at all).
+    // Within addr (merged), "x" is in both, "y" only in one.
+    let json = serde_json::json!([
+        { "addr": { "x": 1, "y": 2 } },
+        { "addr": { "x": 1 } },
+        { "other": 1 }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
+}
+
+#[test]
+fn unmerged_variants_have_no_optional_within() {
+    // Without -m each variant shape contains by definition only objects with
+    // identical keys, so no key is ever optional within a variant.
+    let json = serde_json::json!([
+        { "addr": { "x": 1, "y": 2 } },
+        { "addr": { "x": 1 } }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+}
+
+#[test]
+fn array_of_objects_optional_field() {
+    // The merged shape inside `items[]` should mark `b` as optional because
+    // only one of the two array elements (across all parents) had it.
+    let json = serde_json::json!({
+        "items": [
+            { "a": 1 },
+            { "a": 2, "b": 20 }
+        ]
+    });
+    insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
+}
+
+#[test]
+fn null_value_counts_as_present() {
+    // {x: null} is "x is present" — different from {} (x missing).
+    // x: 2/3, y: 1/3 -> both optional, but x is *seen* in 2 parents not 1.
+    let json = serde_json::json!([
+        { "x": 1 },
+        { "x": null },
+        { "y": 7 }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+}
+
+#[test]
+fn type_variation_alone_is_not_optionality() {
+    // Same key in every parent, just with different scalar types.
+    let json = serde_json::json!([
+        { "id": 1 },
+        { "id": "two" },
+        { "id": 3 }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+}

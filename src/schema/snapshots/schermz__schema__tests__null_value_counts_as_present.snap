@@ -1,0 +1,20 @@
+---
+source: src/schema/tests.rs
+assertion_line: 380
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{
+  "x": {
+    "optional": true,
+    "types": [
+      "NUMBER",
+      "NULL"
+    ]
+  },
+  "y": {
+    "optional": true,
+    "types": [
+      "NUMBER"
+    ]
+  }
+}

@@ -1,5 +1,6 @@
 ---
-source: src/schema.rs
+source: src/schema/tests.rs
+assertion_line: 223
 expression: "Schema::from_json(&json, true).to_json()"
 ---
 {
@@ -13,16 +14,19 @@ expression: "Schema::from_json(&json, true).to_json()"
           ]
         },
         "country": {
+          "optional": true,
           "types": [
             "STRING(3, 7)"
           ]
         },
         "country_code": {
+          "optional": true,
           "types": [
             "STRING(2)"
           ]
         },
         "state": {
+          "optional": true,
           "types": [
             "STRING(10, 11)"
           ]
@@ -60,6 +64,7 @@ expression: "Schema::from_json(&json, true).to_json()"
           ]
         },
         "marital_status": {
+          "optional": true,
           "types": [
             "STRING(6, 7)"
           ]
@@ -74,6 +79,7 @@ expression: "Schema::from_json(&json, true).to_json()"
         "ARRAY": [
           {
             "fax": {
+              "optional": true,
               "types": [
                 "STRING(13)"
               ]
