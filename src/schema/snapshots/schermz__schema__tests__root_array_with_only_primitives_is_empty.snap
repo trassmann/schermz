@@ -1,0 +1,6 @@
+---
+source: src/schema/tests.rs
+assertion_line: 43
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{}

@@ -1,86 +1,15 @@
+mod value_type;
+
+#[cfg(test)]
+mod tests;
+
 use itertools::Itertools;
 use serde_json::Value as JsonValue;
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
-#[derive(Debug, Clone)]
-enum ValueType {
-    Null,
-    Bool,
-    Number,
-    String(usize),
-    Object(SchemaObject),
-    Array(Vec<ValueType>),
-}
-
-#[derive(Debug, Clone)]
-struct SchemaObjectKey {
-    pub id: String,
-    pub v_type: ValueType,
-}
-
-#[derive(Debug, Clone)]
-pub struct SchemaObject {
-    keys: Vec<SchemaObjectKey>,
-}
-
-impl ValueType {
-    pub fn from_json(json: &JsonValue) -> Self {
-        match json {
-            JsonValue::Null => Self::Null,
-            JsonValue::Bool(_) => Self::Bool,
-            JsonValue::Number(_) => Self::Number,
-            JsonValue::String(_) => {
-                let str = json.as_str().unwrap();
-                Self::String(str.len())
-            }
-            JsonValue::Object(_) => Self::Object(SchemaObject::from_json(json)),
-            JsonValue::Array(arr) => {
-                let values = arr.iter().map(Self::from_json).collect();
-                Self::Array(values)
-            }
-        }
-    }
-
-    pub fn to_schema_value_type(&self, merge_objects: bool) -> SchemaValueType {
-        match self {
-            ValueType::Null => SchemaValueType::Primitive("NULL".into()),
-            ValueType::Bool => SchemaValueType::Primitive("BOOL".into()),
-            ValueType::Number => SchemaValueType::Primitive("NUMBER".into()),
-            ValueType::Object(obj) => SchemaValueType::Object(Schema::from_objects(
-                "object".into(),
-                vec![obj.clone()],
-                merge_objects,
-            )),
-            ValueType::Array(arr) => {
-                let mut value_types = arr
-                    .iter()
-                    .map(|value_type| value_type.to_schema_value_type(merge_objects))
-                    .collect::<Vec<SchemaValueType>>();
-
-                value_types.dedup();
-
-                SchemaValueType::Array(value_types)
-            }
-            _ => panic!("Invalid value type"),
-        }
-    }
-}
-
-impl SchemaObject {
-    pub fn from_json(json: &JsonValue) -> Self {
-        let mut keys = Vec::new();
-
-        for (key, value) in json.as_object().unwrap() {
-            keys.push(SchemaObjectKey {
-                id: key.clone(),
-                v_type: ValueType::from_json(value),
-            });
-        }
-        Self { keys }
-    }
-}
+use value_type::{SchemaObject, ValueType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SchemaValueType {
@@ -91,22 +20,41 @@ pub enum SchemaValueType {
 }
 
 impl SchemaValueType {
+    fn from_value_type(value_type: &ValueType, merge_objects: bool) -> Self {
+        match value_type {
+            ValueType::Null => Self::Primitive("NULL".into()),
+            ValueType::Bool => Self::Primitive("BOOL".into()),
+            ValueType::Number => Self::Primitive("NUMBER".into()),
+            ValueType::String(len) => Self::String(*len, *len),
+            ValueType::Object(obj) => {
+                Self::Object(Schema::from_objects(vec![obj.clone()], merge_objects))
+            }
+            ValueType::Array(arr) => {
+                let mut value_types = arr
+                    .iter()
+                    .map(|vt| Self::from_value_type(vt, merge_objects))
+                    .collect::<Vec<_>>();
+                value_types.dedup();
+                Self::Array(value_types)
+            }
+        }
+    }
+
     pub fn to_json(&self) -> JsonValue {
         match self {
             SchemaValueType::Primitive(name) => JsonValue::String(name.clone()),
             SchemaValueType::String(min, max) => {
                 if min == max {
-                    return JsonValue::String(format!("STRING({})", min));
+                    JsonValue::String(format!("STRING({min})"))
+                } else {
+                    JsonValue::String(format!("STRING({min}, {max})"))
                 }
-
-                JsonValue::String(format!("STRING({}, {})", min, max))
             }
             SchemaValueType::Array(v_types) => {
                 let types = v_types
                     .iter()
-                    .map(|v| v.to_json())
+                    .map(SchemaValueType::to_json)
                     .collect::<Vec<JsonValue>>();
-
                 serde_json::json!({ "ARRAY": types })
             }
             SchemaValueType::Object(schema) => schema.to_json(),
@@ -116,14 +64,12 @@ impl SchemaValueType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Schema {
-    pub name: String,
     pub map: HashMap<String, Vec<SchemaValueType>>,
 }
 
 type CollectedObjects = HashMap<String, Vec<SchemaObject>>;
 
 impl Schema {
-    // Groups objects by a hash created from their keys
     fn group_objects_by_keys_fingerprint(objects: Vec<SchemaObject>) -> Vec<Vec<SchemaObject>> {
         objects
             .into_iter()
@@ -131,13 +77,11 @@ impl Schema {
                 let mut hasher = DefaultHasher::new();
                 let sorted_keys = obj
                     .keys
-                    .clone()
-                    .into_iter()
-                    .map(|obj_key| obj_key.id)
+                    .iter()
+                    .map(|obj_key| obj_key.id.as_str())
                     .sorted()
-                    .collect::<Vec<String>>();
-                let stringified_keys = sorted_keys.join("");
-                stringified_keys.hash(&mut hasher);
+                    .collect::<Vec<_>>();
+                sorted_keys.join("").hash(&mut hasher);
                 hasher.finish()
             })
             .into_iter()
@@ -160,8 +104,6 @@ impl Schema {
             for key in &obj.keys {
                 match &key.v_type {
                     ValueType::Object(obj) => {
-                        // Collect all objects with the same key id into a vector
-                        // so we can merge them together into a single schema
                         object_types
                             .entry(key.id.clone())
                             .or_default()
@@ -186,7 +128,10 @@ impl Schema {
                                     let entry = array_primitive_types_map
                                         .entry(key.id.clone())
                                         .or_default();
-                                    let vtype = primitive_type.to_schema_value_type(merge_objects);
+                                    let vtype = SchemaValueType::from_value_type(
+                                        primitive_type,
+                                        merge_objects,
+                                    );
                                     if !entry.contains(&vtype) {
                                         entry.push(vtype);
                                     }
@@ -199,7 +144,7 @@ impl Schema {
                     }
                     primitive_type => {
                         let entry = map.entry(key.id.clone()).or_default();
-                        let vtype = primitive_type.to_schema_value_type(merge_objects);
+                        let vtype = SchemaValueType::from_value_type(primitive_type, merge_objects);
                         if !entry.contains(&vtype) {
                             entry.push(vtype);
                         }
@@ -208,62 +153,59 @@ impl Schema {
             }
         }
 
-        for (key, value) in string_lens {
-            let min = value.iter().min().unwrap();
-            let max = value.iter().max().unwrap();
+        for (key, lens) in string_lens {
+            let min = *lens.iter().min().unwrap();
+            let max = *lens.iter().max().unwrap();
             map.entry(key)
                 .or_default()
-                .push(SchemaValueType::String(*min, *max));
+                .push(SchemaValueType::String(min, max));
         }
 
         for (key, value) in object_types {
-            match merge_objects {
-                true => {
-                    let name = key.clone();
-                    map.entry(key).or_default().push(SchemaValueType::Object(
-                        Schema::from_objects(name, value, true),
-                    ));
-                }
-                false => {
-                    for objects_group in Self::group_objects_by_keys_fingerprint(value) {
-                        map.entry(key.clone())
-                            .or_default()
-                            .push(SchemaValueType::Object(Schema::from_objects(
-                                key.clone(),
-                                objects_group,
-                                false,
-                            )));
-                    }
+            if merge_objects {
+                map.entry(key)
+                    .or_default()
+                    .push(SchemaValueType::Object(Schema::from_objects(value, true)));
+            } else {
+                for objects_group in Self::group_objects_by_keys_fingerprint(value) {
+                    map.entry(key.clone())
+                        .or_default()
+                        .push(SchemaValueType::Object(Schema::from_objects(
+                            objects_group,
+                            false,
+                        )));
                 }
             }
         }
 
-        for (key, value) in array_object_types {
-            let mut all_array_types = Vec::new();
+        // Iterate the union of keys across all three array maps so arrays whose
+        // contents are only primitives or only strings still appear in the output.
+        let array_keys: HashSet<String> = array_object_types
+            .keys()
+            .chain(array_primitive_types_map.keys())
+            .chain(array_string_lens_map.keys())
+            .cloned()
+            .collect();
 
-            match merge_objects {
-                true => {
-                    let schema = Schema::from_objects(key.clone(), value, true);
-                    all_array_types = vec![SchemaValueType::Object(schema)];
+        for key in array_keys {
+            let mut all_array_types: Vec<SchemaValueType> = match array_object_types.remove(&key) {
+                Some(value) if merge_objects => {
+                    vec![SchemaValueType::Object(Schema::from_objects(value, true))]
                 }
-                false => {
-                    for objects_group in Self::group_objects_by_keys_fingerprint(value) {
-                        all_array_types.push(SchemaValueType::Object(Schema::from_objects(
-                            key.clone(),
-                            objects_group,
-                            false,
-                        )));
-                    }
-                }
-            }
+                Some(value) => Self::group_objects_by_keys_fingerprint(value)
+                    .into_iter()
+                    .map(|group| SchemaValueType::Object(Schema::from_objects(group, false)))
+                    .collect(),
+                None => Vec::new(),
+            };
 
             if let Some(primitive_types) = array_primitive_types_map.get_mut(&key) {
                 all_array_types.append(primitive_types);
             }
             if let Some(string_lens) = array_string_lens_map.get_mut(&key) {
-                let min = string_lens.iter().min().unwrap();
-                let max = string_lens.iter().max().unwrap();
-                all_array_types.push(SchemaValueType::String(*min, *max));
+                let min = *string_lens.iter().min().unwrap();
+                let max = *string_lens.iter().max().unwrap();
+                all_array_types.push(SchemaValueType::String(min, max));
             }
             map.entry(key)
                 .or_default()
@@ -273,9 +215,8 @@ impl Schema {
         map
     }
 
-    fn from_objects(name: String, objects: Vec<SchemaObject>, merge_objects: bool) -> Self {
+    fn from_objects(objects: Vec<SchemaObject>, merge_objects: bool) -> Self {
         Self {
-            name,
             map: Self::create_map(objects, merge_objects),
         }
     }
@@ -285,30 +226,21 @@ impl Schema {
 
         for (key, value) in &self.map {
             let mut entry = serde_json::Map::new();
-            let mut types = Vec::new();
-
-            for vtype in value {
-                types.push(vtype.to_json());
-            }
-
-            entry.insert("types".into(), serde_json::Value::Array(types));
-            map.insert(key.clone(), serde_json::Value::Object(entry));
+            let types: Vec<JsonValue> = value.iter().map(SchemaValueType::to_json).collect();
+            entry.insert("types".into(), JsonValue::Array(types));
+            map.insert(key.clone(), JsonValue::Object(entry));
         }
 
-        serde_json::Value::Object(map)
+        JsonValue::Object(map)
     }
 
     pub fn from_json(json: &JsonValue, merge_objects: bool) -> Self {
         match json {
-            JsonValue::Object(_) => Self::from_objects(
-                "root".into(),
-                vec![SchemaObject::from_json(json)],
-                merge_objects,
-            ),
-            JsonValue::Array(_) => {
-                let objects = json
-                    .as_array()
-                    .unwrap()
+            JsonValue::Object(_) => {
+                Self::from_objects(vec![SchemaObject::from_json(json)], merge_objects)
+            }
+            JsonValue::Array(arr) => {
+                let objects = arr
                     .iter()
                     .filter_map(|el| match el {
                         JsonValue::Object(_) => Some(SchemaObject::from_json(el)),
@@ -316,219 +248,9 @@ impl Schema {
                     })
                     .collect::<Vec<SchemaObject>>();
 
-                Self::from_objects("root".into(), objects, merge_objects)
+                Self::from_objects(objects, merge_objects)
             }
-            _ => panic!("Invalid JSON"),
+            _ => panic!("schermz expects the root JSON value to be an object or an array"),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[should_panic]
-    fn invalid_input() {
-        Schema::from_json(&serde_json::Value::Null, false);
-    }
-
-    #[test]
-    fn test_schema_from_object() {
-        let json = serde_json::json!({
-            "name": "John Doe",
-            "title": "",
-            "age": 43,
-            "address": {
-                "street": "10 Downing Street",
-                "city": "London"
-            },
-            "phones": [
-                "+44 1234567",
-                "+44 2345678",
-                123456,
-                { "mobile": "+44 3456789" }
-            ]
-        });
-
-        insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
-    }
-
-    #[test]
-    fn test_schema_from_array_merged() {
-        let json = serde_json::json!([
-            {
-                "name": "Sherlock Holmes",
-                "title": "",
-                "age": 34,
-                "personal_data": {
-                    "gender": "male",
-                    "marital_status": "single",
-                },
-                "address": {
-                    "street": "10 Downing Street",
-                    "city": "London",
-                    "zip": "12345",
-                    "country_code": "UK",
-                },
-                "phones": [
-                    "+44 1234567",
-                    "+44 2345678",
-                    12311,
-                    { "mobile": "+44 3456789" }
-                ]
-            },
-            {
-                "name": "Tony Soprano",
-                "title": "",
-                "age": 39,
-                "personal_data": {
-                    "gender": "male",
-                    "marital_status": "married",
-                },
-                "address": {
-                    "street": "14 Aspen Drive",
-                    "city": "Caldwell",
-                    "zip": "NJ 07006",
-                    "country": "USA",
-                    "state": "New Jersey",
-                    "country_code": "US",
-                },
-                "phones": [
-                    "+1 1234567",
-                    "+1 2345678",
-                    "+1 11111111111",
-                    "+1 301234566",
-                    11224234,
-                    { "mobile": "+1 3456789" }
-                ]
-            },
-            {
-                "name": "Angela Merkel",
-                "title": "",
-                "age": 65,
-                "personal_data": {
-                    "gender": "female",
-                    "marital_status": "married",
-                },
-                "address": {
-                    "street": "Gr. Weg 3",
-                    "city": "Potsdam",
-                    "zip": "14467",
-                    "country": "Germany",
-                    "state": "Brandenburg",
-
-                },
-                "phones": [
-                    "+49 1234222567",
-                    "+49 2343231678",
-                    "+49 1111131111111",
-                    "+49 301212334566",
-                    9999222,
-                    { "mobile": "+49 343156789", "fax": "+49 343156780" }
-                ]
-            },
-            {
-                "name": "Jane Doe",
-                "title": "Dr.",
-                "age": "73",
-                "personal_data": {
-                    "gender": "female",
-                },
-                "address": null,
-                "phones": null
-            }
-        ]);
-
-        insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
-    }
-
-    #[test]
-    fn test_schema_from_array_unmerged() {
-        let json = serde_json::json!([
-            {
-                "name": "Sherlock Holmes",
-                "title": "",
-                "age": 34,
-                "personal_data": {
-                    "gender": "male",
-                    "marital_status": "single",
-                },
-                "address": {
-                    "street": "10 Downing Street",
-                    "city": "London",
-                    "zip": "12345",
-                    "country_code": "UK",
-                },
-                "phones": [
-                    "+44 1234567",
-                    "+44 2345678",
-                    12311,
-                    { "mobile": "+44 3456789" }
-                ]
-            },
-            {
-                "name": "Tony Soprano",
-                "title": "",
-                "age": 39,
-                "personal_data": {
-                    "gender": "male",
-                    "marital_status": "married",
-                },
-                "address": {
-                    "street": "14 Aspen Drive",
-                    "city": "Caldwell",
-                    "zip": "NJ 07006",
-                    "country": "USA",
-                    "state": "New Jersey",
-                    "country_code": "US",
-                },
-                "phones": [
-                    "+1 1234567",
-                    "+1 2345678",
-                    "+1 11111111111",
-                    "+1 301234566",
-                    11224234,
-                    { "mobile": "+1 3456789" }
-                ]
-            },
-            {
-                "name": "Angela Merkel",
-                "title": "",
-                "age": 65,
-                "personal_data": {
-                    "gender": "female",
-                    "marital_status": "married",
-                },
-                "address": {
-                    "street": "Gr. Weg 3",
-                    "city": "Potsdam",
-                    "zip": "14467",
-                    "country": "Germany",
-                    "state": "Brandenburg",
-
-                },
-                "phones": [
-                    "+49 1234222567",
-                    "+49 2343231678",
-                    "+49 1111131111111",
-                    "+49 301212334566",
-                    9999222,
-                    { "mobile": "+49 343156789", "fax": "+49 343156780" }
-                ]
-            },
-            {
-                "name": "Jane Doe",
-                "title": "Dr.",
-                "age": "73",
-                "personal_data": {
-                    "gender": "female",
-                },
-                "address": null,
-                "phones": null
-            }
-        ]);
-
-        insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
     }
 }

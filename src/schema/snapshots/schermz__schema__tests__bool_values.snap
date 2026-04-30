@@ -1,0 +1,17 @@
+---
+source: src/schema/tests.rs
+assertion_line: 49
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{
+  "active": {
+    "types": [
+      "BOOL"
+    ]
+  },
+  "verified": {
+    "types": [
+      "BOOL"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+---
+source: src/schema/tests.rs
+assertion_line: 95
+expression: "Schema::from_json(&json, true).to_json()"
+---
+{
+  "name": {
+    "types": [
+      "STRING(2, 4)"
+    ]
+  }
+}

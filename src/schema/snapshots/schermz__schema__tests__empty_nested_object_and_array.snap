@@ -1,0 +1,12 @@
+---
+source: src/schema/tests.rs
+assertion_line: 58
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{
+  "empty_obj": {
+    "types": [
+      {}
+    ]
+  }
+}

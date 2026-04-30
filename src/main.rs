@@ -1,5 +1,6 @@
 use clap::{ArgAction, Parser};
-use std::fs;
+use std::process::ExitCode;
+use std::{fs, io};
 
 mod schema;
 
@@ -14,11 +15,34 @@ struct Args {
     merge_objects: bool,
 }
 
-fn main() {
+fn run(args: &Args) -> Result<String, String> {
+    let data = fs::read_to_string(&args.file).map_err(|err| match err.kind() {
+        io::ErrorKind::NotFound => format!("file not found: {}", args.file),
+        _ => format!("could not read {}: {err}", args.file),
+    })?;
+    let json: serde_json::Value = serde_json::from_str(&data)
+        .map_err(|err| format!("{} is not valid JSON: {err}", args.file))?;
+    if !json.is_object() && !json.is_array() {
+        return Err(format!(
+            "{} must contain a JSON object or array at the root",
+            args.file
+        ));
+    }
+    let schema = schema::Schema::from_json(&json, args.merge_objects);
+    serde_json::to_string_pretty(&schema.to_json())
+        .map_err(|err| format!("failed to serialize schema: {err}"))
+}
+
+fn main() -> ExitCode {
     let args = Args::parse();
-    let data = fs::read_to_string(args.file).expect("Unable to read file");
-    let json: serde_json::Value = serde_json::from_str(&data).expect("Invalid JSON");
-    let schema: schema::Schema = schema::Schema::from_json(&json, args.merge_objects);
-    let pretty = serde_json::to_string_pretty(&schema.to_json()).unwrap();
-    println!("{}", pretty);
+    match run(&args) {
+        Ok(pretty) => {
+            println!("{pretty}");
+            ExitCode::SUCCESS
+        }
+        Err(msg) => {
+            eprintln!("schermz: {msg}");
+            ExitCode::FAILURE
+        }
+    }
 }
