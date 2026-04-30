@@ -1,14 +1,16 @@
 ---
 source: src/schema/tests.rs
-assertion_line: 312
-expression: "Schema::from_json(&json, false, 30).to_json()"
+assertion_line: 330
+expression: "Schema::from_json(&json, &default_config()).to_json()"
 ---
 {
   "address": {
+    "discriminator": "city",
     "types": [
       "NULL",
       {
         "city": {
+          "discriminator": true,
           "types": [
             "STRING(6)"
           ],
@@ -43,6 +45,7 @@ expression: "Schema::from_json(&json, false, 30).to_json()"
       },
       {
         "city": {
+          "discriminator": true,
           "types": [
             "STRING(8)"
           ],
@@ -93,6 +96,7 @@ expression: "Schema::from_json(&json, false, 30).to_json()"
       },
       {
         "city": {
+          "discriminator": true,
           "types": [
             "STRING(7)"
           ],
@@ -193,6 +197,7 @@ expression: "Schema::from_json(&json, false, 30).to_json()"
         "ARRAY": [
           {
             "mobile": {
+              "discriminator": true,
               "types": [
                 "STRING(10, 11)"
               ],
@@ -212,6 +217,7 @@ expression: "Schema::from_json(&json, false, 30).to_json()"
               ]
             },
             "mobile": {
+              "discriminator": true,
               "types": [
                 "STRING(13)"
               ],
@@ -222,7 +228,8 @@ expression: "Schema::from_json(&json, false, 30).to_json()"
           },
           "NUMBER",
           "STRING(10, 17)"
-        ]
+        ],
+        "discriminator": "mobile"
       }
     ]
   },

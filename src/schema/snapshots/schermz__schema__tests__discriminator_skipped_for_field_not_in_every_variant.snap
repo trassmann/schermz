@@ -1,0 +1,62 @@
+---
+source: src/schema/tests.rs
+assertion_line: 645
+expression: "Schema::from_json(&json, &default_config()).to_json()"
+---
+{
+  "items": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "status": {
+              "discriminator": true,
+              "types": [
+                "STRING(6)"
+              ],
+              "values": [
+                "opened"
+              ]
+            },
+            "tag": {
+              "types": [
+                "STRING(5)"
+              ],
+              "values": [
+                "alpha"
+              ]
+            },
+            "v": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                1
+              ]
+            }
+          },
+          {
+            "status": {
+              "discriminator": true,
+              "types": [
+                "STRING(8)"
+              ],
+              "values": [
+                "in_force"
+              ]
+            },
+            "v": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                2
+              ]
+            }
+          }
+        ],
+        "discriminator": "status"
+      }
+    ]
+  }
+}

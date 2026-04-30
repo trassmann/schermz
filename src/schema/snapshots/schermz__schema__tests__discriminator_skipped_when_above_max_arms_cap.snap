@@ -1,0 +1,330 @@
+---
+source: src/schema/tests.rs
+assertion_line: 590
+expression: "Schema::from_json(&json, &default_config()).to_json()"
+---
+{
+  "items": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v0"
+              ]
+            },
+            "only_in_v0": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v1"
+              ]
+            },
+            "only_in_v1": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v2"
+              ]
+            },
+            "only_in_v2": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v3"
+              ]
+            },
+            "only_in_v3": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v4"
+              ]
+            },
+            "only_in_v4": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v5"
+              ]
+            },
+            "only_in_v5": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v6"
+              ]
+            },
+            "only_in_v6": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v7"
+              ]
+            },
+            "only_in_v7": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v8"
+              ]
+            },
+            "only_in_v8": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "v9"
+              ]
+            },
+            "only_in_v9": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v10"
+              ]
+            },
+            "only_in_v10": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v11"
+              ]
+            },
+            "only_in_v11": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v12"
+              ]
+            },
+            "only_in_v12": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v13"
+              ]
+            },
+            "only_in_v13": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v14"
+              ]
+            },
+            "only_in_v14": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v15"
+              ]
+            },
+            "only_in_v15": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v16"
+              ]
+            },
+            "only_in_v16": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v17"
+              ]
+            },
+            "only_in_v17": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v18"
+              ]
+            },
+            "only_in_v18": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v19"
+              ]
+            },
+            "only_in_v19": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          },
+          {
+            "id": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "v20"
+              ]
+            },
+            "only_in_v20": {
+              "types": [
+                "BOOL"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
