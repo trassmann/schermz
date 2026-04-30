@@ -1,23 +1,16 @@
 ---
 source: src/schema/tests.rs
-assertion_line: 332
+assertion_line: 403
 expression: "Schema::from_json(&json, false, 30).to_json()"
 ---
 {
-  "a": {
+  "status": {
     "types": [
-      "NUMBER"
+      "STRING(6, 8)"
     ],
     "values": [
-      1
-    ]
-  },
-  "b": {
-    "types": [
-      "NUMBER"
-    ],
-    "values": [
-      2
+      "in_force",
+      "opened"
     ]
   }
 }

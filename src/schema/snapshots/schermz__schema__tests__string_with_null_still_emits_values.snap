@@ -1,23 +1,17 @@
 ---
 source: src/schema/tests.rs
-assertion_line: 332
+assertion_line: 500
 expression: "Schema::from_json(&json, false, 30).to_json()"
 ---
 {
-  "a": {
+  "tag": {
     "types": [
-      "NUMBER"
+      "NULL",
+      "STRING(1)"
     ],
     "values": [
-      1
-    ]
-  },
-  "b": {
-    "types": [
-      "NUMBER"
-    ],
-    "values": [
-      2
+      "a",
+      "b"
     ]
   }
 }

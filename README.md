@@ -18,10 +18,12 @@ A tool to generate a schema for a given JSON file.
 Usage: schermz [OPTIONS] --file <FILE>
 
 Options:
-  -f, --file <FILE>    Path to the JSON file
-  -m, --merge-objects  Whether to merge object types into one
-  -h, --help           Print help
-  -V, --version        Print version
+  -f, --file <FILE>             Path to the JSON file
+  -m, --merge-objects           Whether to merge object types into one
+      --enum-threshold <N>      Emit a "values" enum for scalar fields with
+                                at most N distinct observed values [default: 30]
+  -h, --help                    Print help
+  -V, --version                 Print version
 ```
 
 ## The `-m` argument
@@ -138,6 +140,42 @@ are sometimes-present in the merged shape.
 A key whose value is `null` still counts as "present" for this signal —
 `{ "x": null }` is different from `{}`. The `null` shows up inside `types`,
 not in the optionality flag.
+
+## Enum values
+
+When a scalar field has a small number of distinct observed values, schermz
+emits them as a sorted `"values"` list alongside `"types"`. This lets
+downstream codegen turn `z.string()` into `z.enum(["applied", "in_force"])`,
+which is enforceable, surfaces in error messages, and gives compile-time
+autocomplete.
+
+```json
+{
+  "status": {
+    "types": ["STRING(6, 8)"],
+    "values": ["applied", "in_force", "opened", "revoked"]
+  }
+}
+```
+
+The threshold is configurable with `--enum-threshold N` (default `30`). Pass
+`0` to disable the annotation entirely.
+
+Rules:
+
+- Only scalar fields. A key whose `types` mixes a scalar with an object,
+  array, or boolean variant gets no `"values"`.
+- Single non-null scalar variant only. `STRING + NULL` qualifies (the null is
+  the absence of a value, not a competing scalar). `STRING + NUMBER` does
+  not — too ambiguous to enumerate as one list.
+- Booleans are skipped — trivially enumerable from the type alone, and the
+  noise isn't worth it.
+- Numbers are emitted only if every observed value is an integer. A single
+  float in the set disqualifies it (an open enum of floats isn't useful).
+- Strings longer than 200 characters disqualify the set, even if cardinality
+  is below the threshold (JSON blobs, base64, free-text descriptions).
+
+Strings sort lexicographically. Numbers sort numerically.
 
 ## Output
 

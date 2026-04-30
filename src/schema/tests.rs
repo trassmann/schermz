@@ -3,50 +3,50 @@ use super::*;
 #[test]
 #[should_panic]
 fn root_null_panics() {
-    Schema::from_json(&serde_json::Value::Null, false);
+    Schema::from_json(&serde_json::Value::Null, false, 30);
 }
 
 #[test]
 #[should_panic]
 fn root_string_panics() {
-    Schema::from_json(&serde_json::json!("hello"), false);
+    Schema::from_json(&serde_json::json!("hello"), false, 30);
 }
 
 #[test]
 #[should_panic]
 fn root_number_panics() {
-    Schema::from_json(&serde_json::json!(42), false);
+    Schema::from_json(&serde_json::json!(42), false, 30);
 }
 
 #[test]
 #[should_panic]
 fn root_bool_panics() {
-    Schema::from_json(&serde_json::json!(true), false);
+    Schema::from_json(&serde_json::json!(true), false, 30);
 }
 
 #[test]
 fn empty_root_object() {
     let json = serde_json::json!({});
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
 fn empty_root_array() {
     let json = serde_json::json!([]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
 fn root_array_with_only_primitives_is_empty() {
     // The CLI ignores non-object elements at the root array level.
     let json = serde_json::json!([1, "hello", null, true]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
 fn bool_values() {
     let json = serde_json::json!({ "active": true, "verified": false });
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn empty_nested_object_and_array() {
         "empty_obj": {},
         "empty_arr": []
     });
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn deeply_nested_objects() {
     let json = serde_json::json!({
         "a": { "b": { "c": { "d": { "value": "deep" } } } }
     });
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn array_of_primitives_only() {
     let json = serde_json::json!({
         "tags": [1, 2, "three", "four", null, true]
     });
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
@@ -82,7 +82,7 @@ fn nested_arrays_with_strings() {
     let json = serde_json::json!({
         "matrix": [["a", "bb"], ["ccc"]]
     });
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
@@ -92,7 +92,7 @@ fn merged_strings_collapse_min_max() {
         { "name": "abcd" },
         { "name": "abc" }
     ]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, true, 30).to_json());
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn unmerged_keeps_distinct_object_shapes() {
         { "info": { "a": 1 } },
         { "info": { "a": 1, "b": 2 } }
     ]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn merged_collapses_distinct_object_shapes() {
         { "info": { "a": 1 } },
         { "info": { "a": 1, "b": 2 } }
     ]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, true, 30).to_json());
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn test_schema_from_object() {
         ]
     });
 
-    insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, true, 30).to_json());
 }
 
 #[test]
@@ -220,7 +220,7 @@ fn test_schema_from_array_merged() {
         }
     ]);
 
-    insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, true, 30).to_json());
 }
 
 #[test]
@@ -309,7 +309,7 @@ fn test_schema_from_array_unmerged() {
         }
     ]);
 
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 // ---------- Feature 1: optionality tracking ----------
@@ -322,14 +322,14 @@ fn optional_top_level_key_in_array() {
         { "a": 2, "b": 20 },
         { "a": 3 }
     ]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
 fn single_object_input_never_marks_optional() {
     // Sample size of 1 -> we can't infer optionality.
     let json = serde_json::json!({ "a": 1, "b": 2 });
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
@@ -341,7 +341,7 @@ fn nested_object_optional_uses_correct_denominator() {
         { "addr": { "x": 1 } },
         { "other": 1 }
     ]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, true, 30).to_json());
 }
 
 #[test]
@@ -352,7 +352,7 @@ fn unmerged_variants_have_no_optional_within() {
         { "addr": { "x": 1, "y": 2 } },
         { "addr": { "x": 1 } }
     ]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
@@ -365,7 +365,7 @@ fn array_of_objects_optional_field() {
             { "a": 2, "b": 20 }
         ]
     });
-    insta::assert_json_snapshot!(Schema::from_json(&json, true).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, true, 30).to_json());
 }
 
 #[test]
@@ -377,7 +377,7 @@ fn null_value_counts_as_present() {
         { "x": null },
         { "y": 7 }
     ]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }
 
 #[test]
@@ -388,5 +388,124 @@ fn type_variation_alone_is_not_optionality() {
         { "id": "two" },
         { "id": 3 }
     ]);
-    insta::assert_json_snapshot!(Schema::from_json(&json, false).to_json());
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
+}
+
+// ---------- Feature 2: enum value extraction ----------
+
+#[test]
+fn string_enum_two_distinct_values_emitted_sorted() {
+    let json = serde_json::json!([
+        { "status": "in_force" },
+        { "status": "opened" },
+        { "status": "in_force" }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
+}
+
+#[test]
+fn string_enum_over_threshold_skipped() {
+    // 31 distinct values, default threshold is 30 -> no `values` emitted.
+    let mut items = Vec::new();
+    for i in 0..31 {
+        items.push(serde_json::json!({ "k": format!("v{i}") }));
+    }
+    let json = serde_json::Value::Array(items);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
+}
+
+#[test]
+fn custom_threshold_admits_more_values() {
+    // Same 31 distinct values, threshold raised to 100 -> `values` is emitted.
+    let mut items = Vec::new();
+    for i in 0..31 {
+        items.push(serde_json::json!({ "k": format!("v{i}") }));
+    }
+    let json = serde_json::Value::Array(items);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 100).to_json());
+}
+
+#[test]
+fn threshold_zero_disables_values_entirely() {
+    let json = serde_json::json!([{ "k": "a" }, { "k": "b" }]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 0).to_json());
+}
+
+#[test]
+fn mixed_string_and_number_skips_values() {
+    // Single key sometimes a string, sometimes a number -> no `values`.
+    let json = serde_json::json!([
+        { "id": "a" },
+        { "id": 1 },
+        { "id": "b" }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
+}
+
+#[test]
+fn long_strings_skip_values_even_below_threshold() {
+    // Two distinct values, but one is over MAX_ENUM_STRING_LEN (200 chars).
+    let big = "x".repeat(250);
+    let json = serde_json::json!([
+        { "blob": "small" },
+        { "blob": big }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
+}
+
+#[test]
+fn integer_only_numbers_emit_values_sorted_numerically() {
+    let json = serde_json::json!([
+        { "code": 8 },
+        { "code": 1 },
+        { "code": 5 },
+        { "code": 2 },
+        { "code": 3 }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
+}
+
+#[test]
+fn float_numbers_skip_values() {
+    // Any float disqualifies the whole set -- not useful as enum members.
+    let json = serde_json::json!([
+        { "price": 1 },
+        { "price": 2.5 },
+        { "price": 3 }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
+}
+
+#[test]
+fn bool_only_field_skips_values() {
+    // Booleans are trivially enumerable from the type alone; spec recommends
+    // skipping them to avoid noise.
+    let json = serde_json::json!([
+        { "active": true },
+        { "active": false },
+        { "active": true }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
+}
+
+#[test]
+fn string_with_null_still_emits_values() {
+    // STRING + NULL is not "mixed" for the purpose of values -- null is the
+    // absence of a value, not a competing scalar type.
+    let json = serde_json::json!([
+        { "tag": "a" },
+        { "tag": null },
+        { "tag": "b" }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
+}
+
+#[test]
+fn string_with_object_skips_values() {
+    // Mixing a scalar with a non-scalar variant disqualifies the key.
+    let json = serde_json::json!([
+        { "thing": "hello" },
+        { "thing": { "nested": 1 } }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, false, 30).to_json());
 }

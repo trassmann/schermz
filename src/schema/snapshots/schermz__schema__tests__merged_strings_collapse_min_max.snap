@@ -1,12 +1,17 @@
 ---
 source: src/schema/tests.rs
 assertion_line: 95
-expression: "Schema::from_json(&json, true).to_json()"
+expression: "Schema::from_json(&json, true, 30).to_json()"
 ---
 {
   "name": {
     "types": [
       "STRING(2, 4)"
+    ],
+    "values": [
+      "ab",
+      "abc",
+      "abcd"
     ]
   }
 }

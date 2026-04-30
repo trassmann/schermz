@@ -1,0 +1,22 @@
+---
+source: src/schema/tests.rs
+assertion_line: 510
+expression: "Schema::from_json(&json, false, 30).to_json()"
+---
+{
+  "thing": {
+    "types": [
+      "STRING(5)",
+      {
+        "nested": {
+          "types": [
+            "NUMBER"
+          ],
+          "values": [
+            1
+          ]
+        }
+      }
+    ]
+  }
+}

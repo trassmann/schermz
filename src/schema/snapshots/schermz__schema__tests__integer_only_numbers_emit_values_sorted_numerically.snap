@@ -1,26 +1,19 @@
 ---
 source: src/schema/tests.rs
-assertion_line: 325
+assertion_line: 465
 expression: "Schema::from_json(&json, false, 30).to_json()"
 ---
 {
-  "a": {
+  "code": {
     "types": [
       "NUMBER"
     ],
     "values": [
       1,
       2,
-      3
-    ]
-  },
-  "b": {
-    "optional": true,
-    "types": [
-      "NUMBER"
-    ],
-    "values": [
-      20
+      3,
+      5,
+      8
     ]
   }
 }
