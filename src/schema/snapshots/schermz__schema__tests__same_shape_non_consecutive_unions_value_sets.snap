@@ -1,6 +1,6 @@
 ---
 source: src/schema/tests.rs
-assertion_line: 561
+assertion_line: 752
 expression: "Schema::from_json(&json, &default_config()).to_json()"
 ---
 {
@@ -9,40 +9,34 @@ expression: "Schema::from_json(&json, &default_config()).to_json()"
       {
         "ARRAY": [
           {
-            "a": {
+            "id": {
+              "types": [
+                "STRING(1)"
+              ],
+              "values": [
+                "a",
+                "b",
+                "c"
+              ]
+            },
+            "n": {
               "types": [
                 "NUMBER"
               ],
               "values": [
                 1,
+                2,
                 3
-              ]
-            },
-            "status": {
-              "types": [
-                "STRING(4, 6)"
-              ],
-              "values": [
-                "closed",
-                "open"
               ]
             }
           },
           {
-            "b": {
+            "kind": {
               "types": [
-                "NUMBER"
+                "STRING(15)"
               ],
               "values": [
-                2
-              ]
-            },
-            "status": {
-              "types": [
-                "STRING(4)"
-              ],
-              "values": [
-                "open"
+                "different shape"
               ]
             }
           }

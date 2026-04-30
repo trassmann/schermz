@@ -716,3 +716,69 @@ fn discriminator_lifeware_style_5_variants() {
     });
     insta::assert_json_snapshot!(Schema::from_json(&json, &default_config()).to_json());
 }
+
+// ---------- Variant grouping fix: same shape, non-consecutive ----------
+
+#[test]
+fn same_shape_non_consecutive_merges_into_one_variant() {
+    // Three structurally-identical {id, kind} objects interleaved with two
+    // {id, kind, extra} objects. Used to fragment into 5 variants because the
+    // grouping was based on `chunk_by` (consecutive items only). Now folds to 2.
+    let json = serde_json::json!({
+        "items": [
+            { "id": "a1", "kind": "x" },
+            { "id": "b1", "kind": "y", "extra": 1 },
+            { "id": "a2", "kind": "x" },
+            { "id": "b2", "kind": "y", "extra": 2 },
+            { "id": "a3", "kind": "x" }
+        ]
+    });
+    insta::assert_json_snapshot!(Schema::from_json(&json, &default_config()).to_json());
+}
+
+#[test]
+fn same_shape_non_consecutive_unions_value_sets() {
+    // Same-shape objects that disagree on every scalar value still merge into
+    // one variant; their distinct values union into a single `values` list.
+    let json = serde_json::json!({
+        "items": [
+            { "id": "a", "n": 1 },
+            { "kind": "different shape" },
+            { "id": "b", "n": 2 },
+            { "kind": "different shape" },
+            { "id": "c", "n": 3 }
+        ]
+    });
+    insta::assert_json_snapshot!(Schema::from_json(&json, &default_config()).to_json());
+}
+
+#[test]
+fn same_shape_high_cardinality_id_drops_values_keeps_low_card() {
+    // 1000 same-shape objects with unique `id` strings (over default threshold
+    // of 30 -> id values dropped) but a low-cardinality `bucket` field that
+    // should still surface a complete merged value set.
+    let mut items = Vec::new();
+    let buckets = ["alpha", "beta", "gamma"];
+    for i in 0..1000 {
+        let bucket = buckets[i % 3];
+        items.push(serde_json::json!({
+            "id": format!("uuid-{i:04}"),
+            "bucket": bucket,
+        }));
+    }
+    let json = serde_json::json!({ "items": items });
+    insta::assert_json_snapshot!(Schema::from_json(&json, &default_config()).to_json());
+}
+
+#[test]
+fn same_shape_non_consecutive_merges_for_nested_objects() {
+    // The grouping fix has to apply at every level of recursion. Here `inner`
+    // is a nested object with two distinct shapes interleaved across parents.
+    let json = serde_json::json!([
+        { "inner": { "a": 1 } },
+        { "inner": { "a": 1, "b": 2 } },
+        { "inner": { "a": 3 } },
+        { "inner": { "a": 4, "b": 5 } }
+    ]);
+    insta::assert_json_snapshot!(Schema::from_json(&json, &default_config()).to_json());
+}
