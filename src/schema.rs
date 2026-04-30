@@ -16,38 +16,66 @@ use value_type::{SchemaObject, ValueType};
 // downstream even if cardinality is small.
 const MAX_ENUM_STRING_LEN: usize = 200;
 
+/// Knobs for schema construction. Defaults match the CLI defaults.
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub merge_objects: bool,
+    pub enum_threshold: usize,
+    pub discriminator_max_arms: usize,
+    /// When non-empty, only these field names are considered as candidate
+    /// discriminators (in the listed order). When empty, the algorithm
+    /// auto-picks among all qualifying candidates.
+    pub discriminator_fields: Vec<String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            merge_objects: false,
+            enum_threshold: 30,
+            discriminator_max_arms: 20,
+            discriminator_fields: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum SchemaValueType {
     Primitive(String),
     String(usize, usize),
-    Array(Vec<SchemaValueType>),
+    Array {
+        types: Vec<SchemaValueType>,
+        discriminator: Option<String>,
+    },
     Object(Schema),
 }
 
 impl SchemaValueType {
-    fn from_value_type(value_type: &ValueType, merge_objects: bool, enum_threshold: usize) -> Self {
+    fn from_value_type(value_type: &ValueType, config: &Config) -> Self {
         match value_type {
             ValueType::Null => Self::Primitive("NULL".into()),
             ValueType::Bool => Self::Primitive("BOOL".into()),
             ValueType::Number(_) => Self::Primitive("NUMBER".into()),
             ValueType::String { len, .. } => Self::String(*len, *len),
-            ValueType::Object(obj) => Self::Object(Schema::from_objects(
-                vec![obj.clone()],
-                merge_objects,
-                enum_threshold,
-            )),
+            ValueType::Object(obj) => Self::Object(Schema::from_objects(vec![obj.clone()], config)),
             ValueType::Array(arr) => {
-                let mut value_types = arr
+                let mut types = arr
                     .iter()
-                    .map(|vt| Self::from_value_type(vt, merge_objects, enum_threshold))
+                    .map(|vt| Self::from_value_type(vt, config))
                     .collect::<Vec<_>>();
-                value_types.dedup();
-                Self::Array(value_types)
+                types.dedup();
+                Self::Array {
+                    types,
+                    discriminator: None,
+                }
             }
         }
     }
 
-    pub fn to_json(&self) -> JsonValue {
+    /// `inherited_discriminator` carries down the discriminator field name
+    /// from an enclosing union (so the matching key in nested variant Schemas
+    /// can be marked with `"discriminator": true`).
+    fn to_json(&self, inherited_discriminator: Option<&str>) -> JsonValue {
         match self {
             SchemaValueType::Primitive(name) => JsonValue::String(name.clone()),
             SchemaValueType::String(min, max) => {
@@ -57,14 +85,22 @@ impl SchemaValueType {
                     JsonValue::String(format!("STRING({min}, {max})"))
                 }
             }
-            SchemaValueType::Array(v_types) => {
-                let types = v_types
+            SchemaValueType::Array {
+                types,
+                discriminator,
+            } => {
+                let arr: Vec<JsonValue> = types
                     .iter()
-                    .map(SchemaValueType::to_json)
-                    .collect::<Vec<JsonValue>>();
-                serde_json::json!({ "ARRAY": types })
+                    .map(|t| t.to_json(discriminator.as_deref()))
+                    .collect();
+                let mut obj = serde_json::Map::new();
+                obj.insert("ARRAY".into(), JsonValue::Array(arr));
+                if let Some(d) = discriminator {
+                    obj.insert("discriminator".into(), JsonValue::String(d.clone()));
+                }
+                JsonValue::Object(obj)
             }
-            SchemaValueType::Object(schema) => schema.to_json(),
+            SchemaValueType::Object(schema) => schema.to_json_with_hint(inherited_discriminator),
         }
     }
 }
@@ -96,7 +132,6 @@ impl<T: Eq + Hash> BoundedSet<T> {
         }
     }
 
-    /// Returns the underlying set if the threshold was never exceeded.
     fn within_threshold(&self) -> Option<&HashSet<T>> {
         if self.capped {
             None
@@ -111,6 +146,9 @@ struct KeyEntry {
     types: Vec<SchemaValueType>,
     seen_count: usize,
     values: Option<Vec<JsonValue>>,
+    /// Set when `types` contains 2+ Object variants and one of their fields
+    /// uniquely discriminates them.
+    discriminator: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -141,11 +179,7 @@ impl Schema {
             .collect()
     }
 
-    fn create_map(
-        objects: Vec<SchemaObject>,
-        merge_objects: bool,
-        enum_threshold: usize,
-    ) -> HashMap<String, KeyEntry> {
+    fn create_map(objects: Vec<SchemaObject>, config: &Config) -> HashMap<String, KeyEntry> {
         let mut types_map = HashMap::<String, Vec<SchemaValueType>>::new();
         let mut seen_counts = HashMap::<String, usize>::new();
         let mut string_lens = HashMap::<String, Vec<usize>>::new();
@@ -185,11 +219,8 @@ impl Schema {
                                     let entry = array_primitive_types_map
                                         .entry(key.id.clone())
                                         .or_default();
-                                    let vtype = SchemaValueType::from_value_type(
-                                        primitive_type,
-                                        merge_objects,
-                                        enum_threshold,
-                                    );
+                                    let vtype =
+                                        SchemaValueType::from_value_type(primitive_type, config);
                                     if !entry.contains(&vtype) {
                                         entry.push(vtype);
                                     }
@@ -202,7 +233,7 @@ impl Schema {
                         string_values
                             .entry(key.id.clone())
                             .or_insert_with(BoundedSet::new)
-                            .insert(value.clone(), enum_threshold);
+                            .insert(value.clone(), config.enum_threshold);
                     }
                     ValueType::Number(num) => {
                         let entry = types_map.entry(key.id.clone()).or_default();
@@ -213,15 +244,11 @@ impl Schema {
                         number_values
                             .entry(key.id.clone())
                             .or_insert_with(BoundedSet::new)
-                            .insert(num.clone(), enum_threshold);
+                            .insert(num.clone(), config.enum_threshold);
                     }
                     primitive_type => {
                         let entry = types_map.entry(key.id.clone()).or_default();
-                        let vtype = SchemaValueType::from_value_type(
-                            primitive_type,
-                            merge_objects,
-                            enum_threshold,
-                        );
+                        let vtype = SchemaValueType::from_value_type(primitive_type, config);
                         if !entry.contains(&vtype) {
                             entry.push(vtype);
                         }
@@ -240,15 +267,11 @@ impl Schema {
         }
 
         for (key, value) in object_types {
-            if merge_objects {
+            if config.merge_objects {
                 types_map
                     .entry(key)
                     .or_default()
-                    .push(SchemaValueType::Object(Schema::from_objects(
-                        value,
-                        true,
-                        enum_threshold,
-                    )));
+                    .push(SchemaValueType::Object(Schema::from_objects(value, config)));
             } else {
                 for objects_group in Self::group_objects_by_keys_fingerprint(value) {
                     types_map
@@ -256,8 +279,7 @@ impl Schema {
                         .or_default()
                         .push(SchemaValueType::Object(Schema::from_objects(
                             objects_group,
-                            false,
-                            enum_threshold,
+                            config,
                         )));
                 }
             }
@@ -274,18 +296,12 @@ impl Schema {
 
         for key in array_keys {
             let mut all_array_types: Vec<SchemaValueType> = match array_object_types.remove(&key) {
-                Some(value) if merge_objects => {
-                    vec![SchemaValueType::Object(Schema::from_objects(
-                        value,
-                        true,
-                        enum_threshold,
-                    ))]
+                Some(value) if config.merge_objects => {
+                    vec![SchemaValueType::Object(Schema::from_objects(value, config))]
                 }
                 Some(value) => Self::group_objects_by_keys_fingerprint(value)
                     .into_iter()
-                    .map(|group| {
-                        SchemaValueType::Object(Schema::from_objects(group, false, enum_threshold))
-                    })
+                    .map(|group| SchemaValueType::Object(Schema::from_objects(group, config)))
                     .collect(),
                 None => Vec::new(),
             };
@@ -298,10 +314,14 @@ impl Schema {
                 let max = *string_lens.iter().max().unwrap();
                 all_array_types.push(SchemaValueType::String(min, max));
             }
+            let array_discriminator = compute_discriminator(&all_array_types, config);
             types_map
                 .entry(key)
                 .or_default()
-                .push(SchemaValueType::Array(all_array_types));
+                .push(SchemaValueType::Array {
+                    types: all_array_types,
+                    discriminator: array_discriminator,
+                });
         }
 
         types_map
@@ -310,36 +330,42 @@ impl Schema {
                 let seen_count = seen_counts.remove(&key).unwrap_or(0);
                 let values =
                     enum_values_for_key(&types, string_values.get(&key), number_values.get(&key));
+                let discriminator = compute_discriminator(&types, config);
                 (
                     key,
                     KeyEntry {
                         types,
                         seen_count,
                         values,
+                        discriminator,
                     },
                 )
             })
             .collect()
     }
 
-    fn from_objects(
-        objects: Vec<SchemaObject>,
-        merge_objects: bool,
-        enum_threshold: usize,
-    ) -> Self {
+    fn from_objects(objects: Vec<SchemaObject>, config: &Config) -> Self {
         let parent_count = objects.len();
         Self {
             parent_count,
-            map: Self::create_map(objects, merge_objects, enum_threshold),
+            map: Self::create_map(objects, config),
         }
     }
 
     pub fn to_json(&self) -> JsonValue {
+        self.to_json_with_hint(None)
+    }
+
+    fn to_json_with_hint(&self, inherited_discriminator: Option<&str>) -> JsonValue {
         let mut map = serde_json::Map::new();
 
         for (key, entry) in &self.map {
             let mut out = serde_json::Map::new();
-            let types: Vec<JsonValue> = entry.types.iter().map(SchemaValueType::to_json).collect();
+            let types: Vec<JsonValue> = entry
+                .types
+                .iter()
+                .map(|t| t.to_json(entry.discriminator.as_deref()))
+                .collect();
             out.insert("types".into(), JsonValue::Array(types));
             if entry.seen_count < self.parent_count {
                 out.insert("optional".into(), JsonValue::Bool(true));
@@ -347,19 +373,24 @@ impl Schema {
             if let Some(values) = &entry.values {
                 out.insert("values".into(), JsonValue::Array(values.clone()));
             }
+            if let Some(d) = &entry.discriminator {
+                out.insert("discriminator".into(), JsonValue::String(d.clone()));
+            }
+            // If the enclosing union picked THIS key as its discriminator, mark it.
+            // This may overwrite the per-key field-level "discriminator" string set
+            // above — but only on a leaf scalar, where no inner union exists.
+            if Some(key.as_str()) == inherited_discriminator {
+                out.insert("discriminator".into(), JsonValue::Bool(true));
+            }
             map.insert(key.clone(), JsonValue::Object(out));
         }
 
         JsonValue::Object(map)
     }
 
-    pub fn from_json(json: &JsonValue, merge_objects: bool, enum_threshold: usize) -> Self {
+    pub fn from_json(json: &JsonValue, config: &Config) -> Self {
         match json {
-            JsonValue::Object(_) => Self::from_objects(
-                vec![SchemaObject::from_json(json)],
-                merge_objects,
-                enum_threshold,
-            ),
+            JsonValue::Object(_) => Self::from_objects(vec![SchemaObject::from_json(json)], config),
             JsonValue::Array(arr) => {
                 let objects = arr
                     .iter()
@@ -369,7 +400,7 @@ impl Schema {
                     })
                     .collect::<Vec<SchemaObject>>();
 
-                Self::from_objects(objects, merge_objects, enum_threshold)
+                Self::from_objects(objects, config)
             }
             _ => panic!("schermz expects the root JSON value to be an object or an array"),
         }
@@ -424,7 +455,6 @@ fn emit_string_values(set: &BoundedSet<String>) -> Option<Vec<JsonValue>> {
 fn emit_number_values(set: &BoundedSet<Number>) -> Option<Vec<JsonValue>> {
     let values = set.within_threshold()?;
     if !values.iter().all(|n| n.is_i64() || n.is_u64()) {
-        // Floats aren't useful as enum members.
         return None;
     }
     let mut sorted: Vec<&Number> = values.iter().collect();
@@ -439,4 +469,94 @@ fn emit_number_values(set: &BoundedSet<Number>) -> Option<Vec<JsonValue>> {
             .map(|n| JsonValue::Number(n.clone()))
             .collect(),
     )
+}
+
+/// Find a single field whose values uniquely identify each Object variant in
+/// `types`. Returns `None` if there are fewer than 2 Object variants, no field
+/// qualifies, or the union exceeds `discriminator_max_arms` arms.
+fn compute_discriminator(types: &[SchemaValueType], config: &Config) -> Option<String> {
+    let variants: Vec<&Schema> = types
+        .iter()
+        .filter_map(|t| match t {
+            SchemaValueType::Object(s) => Some(s),
+            _ => None,
+        })
+        .collect();
+    if variants.len() < 2 {
+        return None;
+    }
+
+    // Step 1: fields present in every variant.
+    let mut common: Vec<&str> = variants[0].map.keys().map(String::as_str).collect();
+    common.retain(|f| variants[1..].iter().all(|v| v.map.contains_key(*f)));
+
+    // Step 2: present-and-required-and-has-values in every variant.
+    let with_values: Vec<&str> = common
+        .into_iter()
+        .filter(|f| {
+            variants.iter().all(|v| {
+                let entry = match v.map.get(*f) {
+                    Some(e) => e,
+                    None => return false,
+                };
+                entry.values.is_some() && entry.seen_count == v.parent_count
+            })
+        })
+        .collect();
+
+    // Step 3: pairwise-disjoint values across variants.
+    let disjoint: Vec<&str> = with_values
+        .into_iter()
+        .filter(|f| variant_values_pairwise_disjoint(&variants, f))
+        .collect();
+
+    // Step 4: total cardinality cap.
+    let mut survivors: Vec<(&str, usize)> = disjoint
+        .into_iter()
+        .filter_map(|f| {
+            let total: usize = variants
+                .iter()
+                .map(|v| v.map[f].values.as_ref().map(|vs| vs.len()).unwrap_or(0))
+                .sum();
+            if total <= config.discriminator_max_arms {
+                Some((f, total))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if !config.discriminator_fields.is_empty() {
+        // User-named priority list. Try each in order; first hit wins.
+        for user_field in &config.discriminator_fields {
+            if survivors.iter().any(|(f, _)| f == user_field) {
+                return Some(user_field.clone());
+            }
+        }
+        return None;
+    }
+
+    // Auto: smallest total cardinality, tie-break by name lexicographically.
+    survivors.sort_by(|a, b| a.1.cmp(&b.1).then(a.0.cmp(b.0)));
+    survivors.first().map(|(f, _)| (*f).to_string())
+}
+
+fn variant_values_pairwise_disjoint(variants: &[&Schema], field: &str) -> bool {
+    let value_sets: Vec<&[JsonValue]> = variants
+        .iter()
+        .map(|v| {
+            v.map[field]
+                .values
+                .as_deref()
+                .expect("checked Some in caller")
+        })
+        .collect();
+    for i in 0..value_sets.len() {
+        for j in (i + 1)..value_sets.len() {
+            if value_sets[i].iter().any(|v| value_sets[j].contains(v)) {
+                return false;
+            }
+        }
+    }
+    true
 }

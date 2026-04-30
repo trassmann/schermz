@@ -18,12 +18,19 @@ A tool to generate a schema for a given JSON file.
 Usage: schermz [OPTIONS] --file <FILE>
 
 Options:
-  -f, --file <FILE>             Path to the JSON file
-  -m, --merge-objects           Whether to merge object types into one
-      --enum-threshold <N>      Emit a "values" enum for scalar fields with
-                                at most N distinct observed values [default: 30]
-  -h, --help                    Print help
-  -V, --version                 Print version
+  -f, --file <FILE>                       Path to the JSON file
+  -m, --merge-objects                     Whether to merge object types into one
+      --enum-threshold <N>                Emit a "values" enum for scalar fields
+                                          with at most N distinct observed values
+                                          [default: 30]
+      --discriminator-max-arms <N>        Skip the discriminator annotation when
+                                          the union has more than N total values
+                                          [default: 20]
+      --discriminator-fields <FIELDS>     Comma-separated priority list of fields
+                                          to consider as discriminator (overrides
+                                          auto-detection)
+  -h, --help                              Print help
+  -V, --version                           Print version
 ```
 
 ## The `-m` argument
@@ -176,6 +183,83 @@ Rules:
   is below the threshold (JSON blobs, base64, free-text descriptions).
 
 Strings sort lexicographically. Numbers sort numerically.
+
+## Discriminator detection
+
+When a key's `types` (or an array's element list) contains 2+ distinct object
+shapes, schermz looks for a single field whose values uniquely identify each
+variant. If found, it annotates both the union and the field:
+
+```json
+{
+  "additionalPayments": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "status": { "types": ["STRING(6)"], "values": ["opened"], "discriminator": true },
+            "amount": { "types": ["NUMBER"] }
+          },
+          {
+            "status": { "types": ["STRING(8)"], "values": ["in_force"], "discriminator": true },
+            "amount": { "types": ["NUMBER"] },
+            "paidDate": { "types": ["STRING(10)"] }
+          }
+        ],
+        "discriminator": "status"
+      }
+    ]
+  }
+}
+```
+
+This is what downstream codegen needs to emit `z.discriminatedUnion("status", [...])`
+instead of a plain `z.union([...])`. Discriminated unions validate faster and
+produce far better error messages.
+
+### How a field qualifies
+
+A field is a discriminator candidate when:
+
+- It exists in **every** variant.
+- It's a scalar with a `"values"` enum set in every variant (so feature-2's
+  enum extraction has to have succeeded).
+- Its values are **pairwise disjoint** across the variants — no value appears
+  in more than one variant's set.
+- It's not optional in any variant.
+- The total number of distinct values across all variants is at most
+  `--discriminator-max-arms` (default `20`). Above that, a discriminated union
+  isn't useful — it's effectively unbounded.
+
+If multiple fields qualify, schermz picks the one with the smallest total
+cardinality (fewest distinct values across variants), tie-breaking by name
+lexicographically. Detection is **always-on** when not using `-m`. With `-m`,
+distinct shapes are collapsed before this analysis runs, so nothing happens.
+
+### Forcing a discriminator
+
+If the heuristic doesn't pick the field you want — or doesn't pick anything —
+use `--discriminator-fields` with a comma-separated priority list:
+
+```bash
+schermz --discriminator-fields=status,kind -f data.json
+```
+
+When set, only the listed fields are considered, in the listed order. The
+first one that qualifies wins. If none qualify, no discriminator is emitted
+(no auto fallback). This is the escape hatch for cases where the heuristic
+picks a coincidentally-disjoint field, or for forcing a specific
+discriminator when several qualify.
+
+### Known limitations
+
+- **Coincidental disjointness can produce false positives.** If the input
+  happens to have unique values per variant for some unrelated field, that
+  field will be picked. Use `--discriminator-fields` to override.
+- **Composite discriminators are not detected.** If your real discriminator
+  is `(status, invested)` together but neither alone is sufficient, schermz
+  will return no discriminator. Hand-pick one of them with
+  `--discriminator-fields` if it gets you close enough.
 
 ## Output
 

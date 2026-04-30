@@ -1,0 +1,34 @@
+---
+source: src/schema/tests.rs
+assertion_line: 620
+expression: "Schema::from_json(&json, &default_config()).to_json()"
+---
+{
+  "items": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "status": {
+              "types": [
+                "STRING(2)"
+              ],
+              "values": [
+                "ok"
+              ]
+            },
+            "v": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                1,
+                2
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

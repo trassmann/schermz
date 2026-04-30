@@ -1,0 +1,151 @@
+---
+source: src/schema/tests.rs
+assertion_line: 713
+expression: "Schema::from_json(&json, &default_config()).to_json()"
+---
+{
+  "additionalPayments": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "amount": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                100
+              ]
+            },
+            "status": {
+              "discriminator": true,
+              "types": [
+                "STRING(7)"
+              ],
+              "values": [
+                "applied"
+              ]
+            }
+          },
+          {
+            "amount": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                200
+              ]
+            },
+            "openedAt": {
+              "types": [
+                "STRING(10)"
+              ],
+              "values": [
+                "2026-01-01"
+              ]
+            },
+            "status": {
+              "discriminator": true,
+              "types": [
+                "STRING(6)"
+              ],
+              "values": [
+                "opened"
+              ]
+            }
+          },
+          {
+            "amount": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                200
+              ]
+            },
+            "openedAt": {
+              "types": [
+                "STRING(10)"
+              ],
+              "values": [
+                "2026-01-01"
+              ]
+            },
+            "paidDate": {
+              "types": [
+                "STRING(10)"
+              ],
+              "values": [
+                "2026-01-10"
+              ]
+            },
+            "status": {
+              "discriminator": true,
+              "types": [
+                "STRING(8)"
+              ],
+              "values": [
+                "in_force"
+              ]
+            }
+          },
+          {
+            "amount": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                0
+              ]
+            },
+            "revokedAt": {
+              "types": [
+                "STRING(10)"
+              ],
+              "values": [
+                "2026-01-15"
+              ]
+            },
+            "status": {
+              "discriminator": true,
+              "types": [
+                "STRING(7)"
+              ],
+              "values": [
+                "revoked"
+              ]
+            }
+          },
+          {
+            "amount": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                0
+              ]
+            },
+            "reason": {
+              "types": [
+                "STRING(3)"
+              ],
+              "values": [
+                "kyc"
+              ]
+            },
+            "status": {
+              "discriminator": true,
+              "types": [
+                "STRING(8)"
+              ],
+              "values": [
+                "rejected"
+              ]
+            }
+          }
+        ],
+        "discriminator": "status"
+      }
+    ]
+  }
+}

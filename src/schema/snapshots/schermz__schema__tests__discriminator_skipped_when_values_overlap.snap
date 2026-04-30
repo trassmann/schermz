@@ -1,0 +1,69 @@
+---
+source: src/schema/tests.rs
+assertion_line: 557
+expression: "Schema::from_json(&json, &default_config()).to_json()"
+---
+{
+  "items": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "a": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                1
+              ]
+            },
+            "status": {
+              "types": [
+                "STRING(4)"
+              ],
+              "values": [
+                "open"
+              ]
+            }
+          },
+          {
+            "b": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                2
+              ]
+            },
+            "status": {
+              "types": [
+                "STRING(4)"
+              ],
+              "values": [
+                "open"
+              ]
+            }
+          },
+          {
+            "a": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                3
+              ]
+            },
+            "status": {
+              "types": [
+                "STRING(6)"
+              ],
+              "values": [
+                "closed"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

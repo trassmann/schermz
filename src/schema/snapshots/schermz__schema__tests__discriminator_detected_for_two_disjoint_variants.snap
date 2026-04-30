@@ -1,0 +1,62 @@
+---
+source: src/schema/tests.rs
+assertion_line: 544
+expression: "Schema::from_json(&json, &default_config()).to_json()"
+---
+{
+  "items": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "premium": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                100
+              ]
+            },
+            "status": {
+              "discriminator": true,
+              "types": [
+                "STRING(6)"
+              ],
+              "values": [
+                "opened"
+              ]
+            }
+          },
+          {
+            "paidDate": {
+              "types": [
+                "STRING(10)"
+              ],
+              "values": [
+                "2026-01-01"
+              ]
+            },
+            "premium": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                100
+              ]
+            },
+            "status": {
+              "discriminator": true,
+              "types": [
+                "STRING(8)"
+              ],
+              "values": [
+                "in_force"
+              ]
+            }
+          }
+        ],
+        "discriminator": "status"
+      }
+    ]
+  }
+}

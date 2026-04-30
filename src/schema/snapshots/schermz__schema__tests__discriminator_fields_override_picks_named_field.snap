@@ -1,0 +1,70 @@
+---
+source: src/schema/tests.rs
+assertion_line: 663
+expression: "Schema::from_json(&json, &config).to_json()"
+---
+{
+  "items": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "extra1": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                1
+              ]
+            },
+            "kind": {
+              "types": [
+                "STRING(1)"
+              ],
+              "values": [
+                "a"
+              ]
+            },
+            "tag": {
+              "discriminator": true,
+              "types": [
+                "STRING(1)"
+              ],
+              "values": [
+                "x"
+              ]
+            }
+          },
+          {
+            "extra2": {
+              "types": [
+                "NUMBER"
+              ],
+              "values": [
+                2
+              ]
+            },
+            "kind": {
+              "types": [
+                "STRING(1)"
+              ],
+              "values": [
+                "b"
+              ]
+            },
+            "tag": {
+              "discriminator": true,
+              "types": [
+                "STRING(1)"
+              ],
+              "values": [
+                "y"
+              ]
+            }
+          }
+        ],
+        "discriminator": "tag"
+      }
+    ]
+  }
+}
