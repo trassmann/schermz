@@ -4,12 +4,17 @@ mod value_type;
 mod tests;
 
 use itertools::Itertools;
-use serde_json::Value as JsonValue;
+use serde_json::{Number, Value as JsonValue};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
 use value_type::{SchemaObject, ValueType};
+
+// Drop string values from the enum candidate set if any one is longer than this.
+// Long values (JSON blobs, base64, free-text) won't be useful as enum members
+// downstream even if cardinality is small.
+const MAX_ENUM_STRING_LEN: usize = 200;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SchemaValueType {
@@ -20,19 +25,21 @@ pub enum SchemaValueType {
 }
 
 impl SchemaValueType {
-    fn from_value_type(value_type: &ValueType, merge_objects: bool) -> Self {
+    fn from_value_type(value_type: &ValueType, merge_objects: bool, enum_threshold: usize) -> Self {
         match value_type {
             ValueType::Null => Self::Primitive("NULL".into()),
             ValueType::Bool => Self::Primitive("BOOL".into()),
-            ValueType::Number => Self::Primitive("NUMBER".into()),
-            ValueType::String(len) => Self::String(*len, *len),
-            ValueType::Object(obj) => {
-                Self::Object(Schema::from_objects(vec![obj.clone()], merge_objects))
-            }
+            ValueType::Number(_) => Self::Primitive("NUMBER".into()),
+            ValueType::String { len, .. } => Self::String(*len, *len),
+            ValueType::Object(obj) => Self::Object(Schema::from_objects(
+                vec![obj.clone()],
+                merge_objects,
+                enum_threshold,
+            )),
             ValueType::Array(arr) => {
                 let mut value_types = arr
                     .iter()
-                    .map(|vt| Self::from_value_type(vt, merge_objects))
+                    .map(|vt| Self::from_value_type(vt, merge_objects, enum_threshold))
                     .collect::<Vec<_>>();
                 value_types.dedup();
                 Self::Array(value_types)
@@ -62,10 +69,48 @@ impl SchemaValueType {
     }
 }
 
+/// Bounded set: stops accepting new entries once it has more than `threshold`
+/// distinct values. Used to cap enum-candidate accumulation so we don't waste
+/// memory on high-cardinality fields.
+#[derive(Debug, Clone, PartialEq)]
+struct BoundedSet<T: Eq + Hash> {
+    values: HashSet<T>,
+    capped: bool,
+}
+
+impl<T: Eq + Hash> BoundedSet<T> {
+    fn new() -> Self {
+        Self {
+            values: HashSet::new(),
+            capped: false,
+        }
+    }
+
+    fn insert(&mut self, value: T, threshold: usize) {
+        if self.capped {
+            return;
+        }
+        self.values.insert(value);
+        if self.values.len() > threshold {
+            self.capped = true;
+        }
+    }
+
+    /// Returns the underlying set if the threshold was never exceeded.
+    fn within_threshold(&self) -> Option<&HashSet<T>> {
+        if self.capped {
+            None
+        } else {
+            Some(&self.values)
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct KeyEntry {
     types: Vec<SchemaValueType>,
     seen_count: usize,
+    values: Option<Vec<JsonValue>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,10 +141,16 @@ impl Schema {
             .collect()
     }
 
-    fn create_map(objects: Vec<SchemaObject>, merge_objects: bool) -> HashMap<String, KeyEntry> {
+    fn create_map(
+        objects: Vec<SchemaObject>,
+        merge_objects: bool,
+        enum_threshold: usize,
+    ) -> HashMap<String, KeyEntry> {
         let mut types_map = HashMap::<String, Vec<SchemaValueType>>::new();
         let mut seen_counts = HashMap::<String, usize>::new();
         let mut string_lens = HashMap::<String, Vec<usize>>::new();
+        let mut string_values = HashMap::<String, BoundedSet<String>>::new();
+        let mut number_values = HashMap::<String, BoundedSet<Number>>::new();
         let mut object_types = CollectedObjects::new();
         let mut array_object_types = CollectedObjects::new();
         let mut array_primitive_types_map = HashMap::<String, Vec<SchemaValueType>>::new();
@@ -124,7 +175,7 @@ impl Schema {
                                         .or_default()
                                         .push(obj.clone());
                                 }
-                                ValueType::String(len) => {
+                                ValueType::String { len, .. } => {
                                     array_string_lens_map
                                         .entry(key.id.clone())
                                         .or_default()
@@ -137,6 +188,7 @@ impl Schema {
                                     let vtype = SchemaValueType::from_value_type(
                                         primitive_type,
                                         merge_objects,
+                                        enum_threshold,
                                     );
                                     if !entry.contains(&vtype) {
                                         entry.push(vtype);
@@ -145,12 +197,31 @@ impl Schema {
                             }
                         }
                     }
-                    ValueType::String(len) => {
+                    ValueType::String { len, value } => {
                         string_lens.entry(key.id.clone()).or_default().push(*len);
+                        string_values
+                            .entry(key.id.clone())
+                            .or_insert_with(BoundedSet::new)
+                            .insert(value.clone(), enum_threshold);
+                    }
+                    ValueType::Number(num) => {
+                        let entry = types_map.entry(key.id.clone()).or_default();
+                        let vtype = SchemaValueType::Primitive("NUMBER".into());
+                        if !entry.contains(&vtype) {
+                            entry.push(vtype);
+                        }
+                        number_values
+                            .entry(key.id.clone())
+                            .or_insert_with(BoundedSet::new)
+                            .insert(num.clone(), enum_threshold);
                     }
                     primitive_type => {
                         let entry = types_map.entry(key.id.clone()).or_default();
-                        let vtype = SchemaValueType::from_value_type(primitive_type, merge_objects);
+                        let vtype = SchemaValueType::from_value_type(
+                            primitive_type,
+                            merge_objects,
+                            enum_threshold,
+                        );
                         if !entry.contains(&vtype) {
                             entry.push(vtype);
                         }
@@ -173,7 +244,11 @@ impl Schema {
                 types_map
                     .entry(key)
                     .or_default()
-                    .push(SchemaValueType::Object(Schema::from_objects(value, true)));
+                    .push(SchemaValueType::Object(Schema::from_objects(
+                        value,
+                        true,
+                        enum_threshold,
+                    )));
             } else {
                 for objects_group in Self::group_objects_by_keys_fingerprint(value) {
                     types_map
@@ -182,6 +257,7 @@ impl Schema {
                         .push(SchemaValueType::Object(Schema::from_objects(
                             objects_group,
                             false,
+                            enum_threshold,
                         )));
                 }
             }
@@ -199,11 +275,17 @@ impl Schema {
         for key in array_keys {
             let mut all_array_types: Vec<SchemaValueType> = match array_object_types.remove(&key) {
                 Some(value) if merge_objects => {
-                    vec![SchemaValueType::Object(Schema::from_objects(value, true))]
+                    vec![SchemaValueType::Object(Schema::from_objects(
+                        value,
+                        true,
+                        enum_threshold,
+                    ))]
                 }
                 Some(value) => Self::group_objects_by_keys_fingerprint(value)
                     .into_iter()
-                    .map(|group| SchemaValueType::Object(Schema::from_objects(group, false)))
+                    .map(|group| {
+                        SchemaValueType::Object(Schema::from_objects(group, false, enum_threshold))
+                    })
                     .collect(),
                 None => Vec::new(),
             };
@@ -226,16 +308,29 @@ impl Schema {
             .into_iter()
             .map(|(key, types)| {
                 let seen_count = seen_counts.remove(&key).unwrap_or(0);
-                (key, KeyEntry { types, seen_count })
+                let values =
+                    enum_values_for_key(&types, string_values.get(&key), number_values.get(&key));
+                (
+                    key,
+                    KeyEntry {
+                        types,
+                        seen_count,
+                        values,
+                    },
+                )
             })
             .collect()
     }
 
-    fn from_objects(objects: Vec<SchemaObject>, merge_objects: bool) -> Self {
+    fn from_objects(
+        objects: Vec<SchemaObject>,
+        merge_objects: bool,
+        enum_threshold: usize,
+    ) -> Self {
         let parent_count = objects.len();
         Self {
             parent_count,
-            map: Self::create_map(objects, merge_objects),
+            map: Self::create_map(objects, merge_objects, enum_threshold),
         }
     }
 
@@ -249,17 +344,22 @@ impl Schema {
             if entry.seen_count < self.parent_count {
                 out.insert("optional".into(), JsonValue::Bool(true));
             }
+            if let Some(values) = &entry.values {
+                out.insert("values".into(), JsonValue::Array(values.clone()));
+            }
             map.insert(key.clone(), JsonValue::Object(out));
         }
 
         JsonValue::Object(map)
     }
 
-    pub fn from_json(json: &JsonValue, merge_objects: bool) -> Self {
+    pub fn from_json(json: &JsonValue, merge_objects: bool, enum_threshold: usize) -> Self {
         match json {
-            JsonValue::Object(_) => {
-                Self::from_objects(vec![SchemaObject::from_json(json)], merge_objects)
-            }
+            JsonValue::Object(_) => Self::from_objects(
+                vec![SchemaObject::from_json(json)],
+                merge_objects,
+                enum_threshold,
+            ),
             JsonValue::Array(arr) => {
                 let objects = arr
                     .iter()
@@ -269,9 +369,74 @@ impl Schema {
                     })
                     .collect::<Vec<SchemaObject>>();
 
-                Self::from_objects(objects, merge_objects)
+                Self::from_objects(objects, merge_objects, enum_threshold)
             }
             _ => panic!("schermz expects the root JSON value to be an object or an array"),
         }
     }
+}
+
+/// Decide whether a key's distinct scalar values should be emitted as a
+/// `"values"` enum annotation. A single non-null scalar variant (string XOR
+/// number) is required; mixed-type unions are skipped to keep downstream codegen
+/// rules simple.
+fn enum_values_for_key(
+    types: &[SchemaValueType],
+    string_values: Option<&BoundedSet<String>>,
+    number_values: Option<&BoundedSet<Number>>,
+) -> Option<Vec<JsonValue>> {
+    let mut has_string = false;
+    let mut has_number = false;
+    let mut has_other = false;
+    for t in types {
+        match t {
+            SchemaValueType::String(_, _) => has_string = true,
+            SchemaValueType::Primitive(name) if name == "NUMBER" => has_number = true,
+            SchemaValueType::Primitive(name) if name == "NULL" => {}
+            _ => has_other = true,
+        }
+    }
+    if has_other {
+        return None;
+    }
+    match (has_string, has_number) {
+        (true, false) => emit_string_values(string_values?),
+        (false, true) => emit_number_values(number_values?),
+        _ => None,
+    }
+}
+
+fn emit_string_values(set: &BoundedSet<String>) -> Option<Vec<JsonValue>> {
+    let values = set.within_threshold()?;
+    if values.iter().any(|s| s.len() > MAX_ENUM_STRING_LEN) {
+        return None;
+    }
+    let mut sorted: Vec<&String> = values.iter().collect();
+    sorted.sort();
+    Some(
+        sorted
+            .into_iter()
+            .map(|s| JsonValue::String(s.clone()))
+            .collect(),
+    )
+}
+
+fn emit_number_values(set: &BoundedSet<Number>) -> Option<Vec<JsonValue>> {
+    let values = set.within_threshold()?;
+    if !values.iter().all(|n| n.is_i64() || n.is_u64()) {
+        // Floats aren't useful as enum members.
+        return None;
+    }
+    let mut sorted: Vec<&Number> = values.iter().collect();
+    sorted.sort_by_key(|n| {
+        n.as_i64()
+            .or_else(|| n.as_u64().map(|u| u as i64))
+            .unwrap_or(0)
+    });
+    Some(
+        sorted
+            .into_iter()
+            .map(|n| JsonValue::Number(n.clone()))
+            .collect(),
+    )
 }

@@ -1,11 +1,11 @@
-use serde_json::Value as JsonValue;
+use serde_json::{Number, Value as JsonValue};
 
 #[derive(Debug, Clone)]
 pub(super) enum ValueType {
     Null,
     Bool,
-    Number,
-    String(usize),
+    Number(Number),
+    String { len: usize, value: String },
     Object(SchemaObject),
     Array(Vec<ValueType>),
 }
@@ -26,8 +26,11 @@ impl ValueType {
         match json {
             JsonValue::Null => Self::Null,
             JsonValue::Bool(_) => Self::Bool,
-            JsonValue::Number(_) => Self::Number,
-            JsonValue::String(s) => Self::String(s.len()),
+            JsonValue::Number(n) => Self::Number(n.clone()),
+            JsonValue::String(s) => Self::String {
+                len: s.len(),
+                value: s.clone(),
+            },
             JsonValue::Object(_) => Self::Object(SchemaObject::from_json(json)),
             JsonValue::Array(arr) => {
                 let values = arr.iter().map(Self::from_json).collect();

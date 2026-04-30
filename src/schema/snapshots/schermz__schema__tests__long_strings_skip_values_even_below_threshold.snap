@@ -1,0 +1,12 @@
+---
+source: src/schema/tests.rs
+assertion_line: 453
+expression: "Schema::from_json(&json, false, 30).to_json()"
+---
+{
+  "blob": {
+    "types": [
+      "STRING(5, 250)"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 ---
 source: src/schema/tests.rs
 assertion_line: 368
-expression: "Schema::from_json(&json, true).to_json()"
+expression: "Schema::from_json(&json, true, 30).to_json()"
 ---
 {
   "items": {
@@ -12,12 +12,19 @@ expression: "Schema::from_json(&json, true).to_json()"
             "a": {
               "types": [
                 "NUMBER"
+              ],
+              "values": [
+                1,
+                2
               ]
             },
             "b": {
               "optional": true,
               "types": [
                 "NUMBER"
+              ],
+              "values": [
+                20
               ]
             }
           }

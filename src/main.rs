@@ -13,6 +13,10 @@ struct Args {
     /// Whether to merge object types into one
     #[arg(short, long, action = ArgAction::SetTrue)]
     merge_objects: bool,
+    /// When a scalar field has at most N distinct observed values, emit them
+    /// as an enum-style "values" annotation. Pass 0 to disable.
+    #[arg(long, default_value_t = 30)]
+    enum_threshold: usize,
 }
 
 fn run(args: &Args) -> Result<String, String> {
@@ -28,7 +32,7 @@ fn run(args: &Args) -> Result<String, String> {
             args.file
         ));
     }
-    let schema = schema::Schema::from_json(&json, args.merge_objects);
+    let schema = schema::Schema::from_json(&json, args.merge_objects, args.enum_threshold);
     serde_json::to_string_pretty(&schema.to_json())
         .map_err(|err| format!("failed to serialize schema: {err}"))
 }

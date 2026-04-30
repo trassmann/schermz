@@ -1,7 +1,7 @@
 ---
 source: src/schema/tests.rs
 assertion_line: 223
-expression: "Schema::from_json(&json, true).to_json()"
+expression: "Schema::from_json(&json, true, 30).to_json()"
 ---
 {
   "address": {
@@ -11,34 +11,61 @@ expression: "Schema::from_json(&json, true).to_json()"
         "city": {
           "types": [
             "STRING(6, 8)"
+          ],
+          "values": [
+            "Caldwell",
+            "London",
+            "Potsdam"
           ]
         },
         "country": {
           "optional": true,
           "types": [
             "STRING(3, 7)"
+          ],
+          "values": [
+            "Germany",
+            "USA"
           ]
         },
         "country_code": {
           "optional": true,
           "types": [
             "STRING(2)"
+          ],
+          "values": [
+            "UK",
+            "US"
           ]
         },
         "state": {
           "optional": true,
           "types": [
             "STRING(10, 11)"
+          ],
+          "values": [
+            "Brandenburg",
+            "New Jersey"
           ]
         },
         "street": {
           "types": [
             "STRING(9, 17)"
+          ],
+          "values": [
+            "10 Downing Street",
+            "14 Aspen Drive",
+            "Gr. Weg 3"
           ]
         },
         "zip": {
           "types": [
             "STRING(5, 8)"
+          ],
+          "values": [
+            "12345",
+            "14467",
+            "NJ 07006"
           ]
         }
       }
@@ -53,6 +80,12 @@ expression: "Schema::from_json(&json, true).to_json()"
   "name": {
     "types": [
       "STRING(8, 15)"
+    ],
+    "values": [
+      "Angela Merkel",
+      "Jane Doe",
+      "Sherlock Holmes",
+      "Tony Soprano"
     ]
   },
   "personal_data": {
@@ -61,12 +94,20 @@ expression: "Schema::from_json(&json, true).to_json()"
         "gender": {
           "types": [
             "STRING(4, 6)"
+          ],
+          "values": [
+            "female",
+            "male"
           ]
         },
         "marital_status": {
           "optional": true,
           "types": [
             "STRING(6, 7)"
+          ],
+          "values": [
+            "married",
+            "single"
           ]
         }
       }
@@ -82,11 +123,19 @@ expression: "Schema::from_json(&json, true).to_json()"
               "optional": true,
               "types": [
                 "STRING(13)"
+              ],
+              "values": [
+                "+49 343156780"
               ]
             },
             "mobile": {
               "types": [
                 "STRING(10, 13)"
+              ],
+              "values": [
+                "+1 3456789",
+                "+44 3456789",
+                "+49 343156789"
               ]
             }
           },
@@ -99,6 +148,10 @@ expression: "Schema::from_json(&json, true).to_json()"
   "title": {
     "types": [
       "STRING(0, 3)"
+    ],
+    "values": [
+      "",
+      "Dr."
     ]
   }
 }

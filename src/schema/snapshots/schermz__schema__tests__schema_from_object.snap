@@ -1,6 +1,7 @@
 ---
-source: src/schema.rs
-expression: "Schema::from_json(&json).to_json()"
+source: src/schema/tests.rs
+assertion_line: 134
+expression: "Schema::from_json(&json, true, 30).to_json()"
 ---
 {
   "address": {
@@ -9,11 +10,17 @@ expression: "Schema::from_json(&json).to_json()"
         "city": {
           "types": [
             "STRING(6)"
+          ],
+          "values": [
+            "London"
           ]
         },
         "street": {
           "types": [
             "STRING(17)"
+          ],
+          "values": [
+            "10 Downing Street"
           ]
         }
       }
@@ -22,11 +29,17 @@ expression: "Schema::from_json(&json).to_json()"
   "age": {
     "types": [
       "NUMBER"
+    ],
+    "values": [
+      43
     ]
   },
   "name": {
     "types": [
       "STRING(8)"
+    ],
+    "values": [
+      "John Doe"
     ]
   },
   "phones": {
@@ -37,6 +50,9 @@ expression: "Schema::from_json(&json).to_json()"
             "mobile": {
               "types": [
                 "STRING(11)"
+              ],
+              "values": [
+                "+44 3456789"
               ]
             }
           },
@@ -49,6 +65,9 @@ expression: "Schema::from_json(&json).to_json()"
   "title": {
     "types": [
       "STRING(0)"
+    ],
+    "values": [
+      ""
     ]
   }
 }

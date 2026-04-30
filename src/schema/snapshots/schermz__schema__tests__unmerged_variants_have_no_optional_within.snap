@@ -1,7 +1,7 @@
 ---
 source: src/schema/tests.rs
 assertion_line: 355
-expression: "Schema::from_json(&json, false).to_json()"
+expression: "Schema::from_json(&json, false, 30).to_json()"
 ---
 {
   "addr": {
@@ -10,11 +10,17 @@ expression: "Schema::from_json(&json, false).to_json()"
         "x": {
           "types": [
             "NUMBER"
+          ],
+          "values": [
+            1
           ]
         },
         "y": {
           "types": [
             "NUMBER"
+          ],
+          "values": [
+            2
           ]
         }
       },
@@ -22,6 +28,9 @@ expression: "Schema::from_json(&json, false).to_json()"
         "x": {
           "types": [
             "NUMBER"
+          ],
+          "values": [
+            1
           ]
         }
       }

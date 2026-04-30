@@ -1,7 +1,7 @@
 ---
 source: src/schema/tests.rs
 assertion_line: 66
-expression: "Schema::from_json(&json, false).to_json()"
+expression: "Schema::from_json(&json, false, 30).to_json()"
 ---
 {
   "a": {
@@ -19,6 +19,9 @@ expression: "Schema::from_json(&json, false).to_json()"
                           "value": {
                             "types": [
                               "STRING(4)"
+                            ],
+                            "values": [
+                              "deep"
                             ]
                           }
                         }
