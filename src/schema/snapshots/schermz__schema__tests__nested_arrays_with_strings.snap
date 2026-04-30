@@ -1,0 +1,26 @@
+---
+source: src/schema/tests.rs
+assertion_line: 85
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{
+  "matrix": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "ARRAY": [
+              "STRING(1)",
+              "STRING(2)"
+            ]
+          },
+          {
+            "ARRAY": [
+              "STRING(3)"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+---
+source: src/schema/tests.rs
+assertion_line: 66
+expression: "Schema::from_json(&json, false).to_json()"
+---
+{
+  "a": {
+    "types": [
+      {
+        "b": {
+          "types": [
+            {
+              "c": {
+                "types": [
+                  {
+                    "d": {
+                      "types": [
+                        {
+                          "value": {
+                            "types": [
+                              "STRING(4)"
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
