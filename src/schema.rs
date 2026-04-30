@@ -5,9 +5,8 @@ mod tests;
 
 use itertools::Itertools;
 use serde_json::{Number, Value as JsonValue};
-use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 
 use value_type::{SchemaObject, ValueType};
 
@@ -161,22 +160,22 @@ type CollectedObjects = HashMap<String, Vec<SchemaObject>>;
 
 impl Schema {
     fn group_objects_by_keys_fingerprint(objects: Vec<SchemaObject>) -> Vec<Vec<SchemaObject>> {
-        objects
-            .into_iter()
-            .chunk_by(|obj| {
-                let mut hasher = DefaultHasher::new();
-                let sorted_keys = obj
-                    .keys
-                    .iter()
-                    .map(|obj_key| obj_key.id.as_str())
-                    .sorted()
-                    .collect::<Vec<_>>();
-                sorted_keys.join("").hash(&mut hasher);
-                hasher.finish()
-            })
-            .into_iter()
-            .map(|(_, gr)| gr.collect_vec())
-            .collect()
+        // Fold objects with the same key set into the same group regardless of
+        // their position. Ordering is by first occurrence, so deterministic and
+        // source-order-friendly for snapshot tests.
+        let mut groups: Vec<Vec<SchemaObject>> = Vec::new();
+        let mut fp_to_idx: HashMap<String, usize> = HashMap::new();
+
+        for obj in objects {
+            let fp = key_fingerprint(&obj);
+            if let Some(&idx) = fp_to_idx.get(&fp) {
+                groups[idx].push(obj);
+            } else {
+                fp_to_idx.insert(fp, groups.len());
+                groups.push(vec![obj]);
+            }
+        }
+        groups
     }
 
     fn create_map(objects: Vec<SchemaObject>, config: &Config) -> HashMap<String, KeyEntry> {
@@ -405,6 +404,19 @@ impl Schema {
             _ => panic!("schermz expects the root JSON value to be an object or an array"),
         }
     }
+}
+
+/// Stable identity for an object's key set. Used to fold structurally
+/// identical objects into the same variant during unmerged grouping.
+fn key_fingerprint(obj: &SchemaObject) -> String {
+    obj.keys
+        .iter()
+        .map(|k| k.id.as_str())
+        .sorted()
+        .collect::<Vec<_>>()
+        // U+001E (record separator) keeps `["ab", "c"]` and `["a", "bc"]`
+        // distinct without colliding with anything that turns up in JSON keys.
+        .join("\u{001e}")
 }
 
 /// Decide whether a key's distinct scalar values should be emitted as a

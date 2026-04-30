@@ -1,0 +1,42 @@
+---
+source: src/schema/tests.rs
+assertion_line: 783
+expression: "Schema::from_json(&json, &default_config()).to_json()"
+---
+{
+  "inner": {
+    "types": [
+      {
+        "a": {
+          "types": [
+            "NUMBER"
+          ],
+          "values": [
+            1,
+            3
+          ]
+        }
+      },
+      {
+        "a": {
+          "types": [
+            "NUMBER"
+          ],
+          "values": [
+            1,
+            4
+          ]
+        },
+        "b": {
+          "types": [
+            "NUMBER"
+          ],
+          "values": [
+            2,
+            5
+          ]
+        }
+      }
+    ]
+  }
+}

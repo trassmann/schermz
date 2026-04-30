@@ -1,0 +1,32 @@
+---
+source: src/schema/tests.rs
+assertion_line: 770
+expression: "Schema::from_json(&json, &default_config()).to_json()"
+---
+{
+  "items": {
+    "types": [
+      {
+        "ARRAY": [
+          {
+            "bucket": {
+              "types": [
+                "STRING(4, 5)"
+              ],
+              "values": [
+                "alpha",
+                "beta",
+                "gamma"
+              ]
+            },
+            "id": {
+              "types": [
+                "STRING(9)"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
